@@ -1,4 +1,4 @@
-# Creador Blog IA (WordPress)
+﻿# Creador Blog IA (WordPress)
 
 Genera entradas completas con IA (texto + imágenes) en una sola pasada. Incluye marcadores de imagen inteligentes, programación con reanudación por checkpoint, rellenado de imágenes pendientes y cálculo de costes (estimado y real).
 
@@ -113,3 +113,4 @@ Permisos y seguridad
 
 Licencia
 - GPLv2 o posterior.
+

@@ -1,8 +1,8 @@
-=== Creador Blog IA ===
+﻿=== Creador Blog IA ===
 Contributors: webgoh
 Requires at least: 5.8
 Tested up to: 6.7
-Stable tag: 5.7.9
+Stable tag: 9.0.0
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -37,4 +37,6 @@ Se reemplaza por un marcador “pendiente” oculto. Luego puedes pulsar “Rell
 Activa “precio fijo por imagen”, ajusta importes mini/full y, si fuera necesario, el sobrecoste por llamada de texto/SEO y el multiplicador de ajuste del coste real.
 
 == Changelog ==
+* 9.0.0 - Soporte ampliado de idiomas europeos en FAQs y ajustes menores.
 * 5.7.9 – Reanudación estable, rellenado de pendientes, costes estimado/real, mejoras de limpieza y logs.
+
