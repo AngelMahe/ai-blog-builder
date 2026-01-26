@@ -81,7 +81,8 @@ Limpieza de artefactos
 - Mensajes claros en cada fase (cola, checkpoint, evento, imágenes, pendientes, etc.).
 
 ## Requisitos e instalación
-- WordPress 6.x o superior, PHP 8.0+.
+- WordPress 6.9+ (probado en 6.9), PHP 8.2+.
+- Multisite compatible (probado en entorno multisite).
 - Clave de API de OpenAI con permisos mínimos.
 - Yoast SEO: opcional (el plugin funciona sin él).
 

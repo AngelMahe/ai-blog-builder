@@ -1,9 +1,10 @@
 ﻿=== Creador Blog IA ===
 Contributors: webgoh
-Requires at least: 5.8
-Tested up to: 6.7
+Requires at least: 6.9
+Tested up to: 6.9
 Stable tag: 9.0.0
-Requires PHP: 8.0
+Requires PHP: 8.2
+Network: true
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
