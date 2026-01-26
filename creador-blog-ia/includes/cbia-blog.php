@@ -34,8 +34,14 @@ if (!function_exists('cbia_log_key')) {
 if (!function_exists('cbia_log_message')) {
     function cbia_log_message($message) {
         $message = (string)$message;
+        $level = 'INFO';
+        if (preg_match('/^\s*\[(DEBUG|INFO|WARN|WARNING|ERROR)\]\s*/i', $message, $m)) {
+            $level = strtoupper($m[1]);
+            if ($level === 'WARNING') $level = 'WARN';
+            $message = preg_replace('/^\s*\[(DEBUG|INFO|WARN|WARNING|ERROR)\]\s*/i', '', $message);
+        }
         if (function_exists('cbia_log')) {
-            cbia_log('[BLOG] ' . $message, 'INFO');
+            cbia_log('[BLOG] ' . $message, $level);
             return;
         }
 

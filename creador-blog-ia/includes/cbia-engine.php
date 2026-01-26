@@ -26,7 +26,7 @@ if (!function_exists('cbia_force_insert_markers')) {
             $marker = "\n[IMAGEN: {$desc}]\n"; $html = substr($html, 0, $pos0 + $p_len) . $marker . substr($html, $pos0 + $p_len); $inserted++;
         }
         // FAQ
-        $faq_pos = preg_match('/<h2[^>]*>.*?(preguntas\s+frecuentes|faq).*?<\/h2>/i', $html, $mm2, PREG_OFFSET_CAPTURE) ? $mm2[0][1] : -1;
+		$faq_pos = preg_match('/<h2[^>]*>.*?(preguntas\s+frecuentes|faq|frequently\s+asked\s+questions|perguntas\s+frequentes|questions\s+fréquentes|domande\s+frequenti|häufig\s+gestellte\s+fragen|veelgestelde\s+vragen|vanliga\s+frågor|ofte\s+stillede\s+spørgsmål|ofte\s+stilte\s+spørsmål|usein\s+kysytyt\s+kysymykset|najczęściej\s+zadawane\s+pytania|často\s+kladené\s+otázky|gyakran\s+ismételt\s+kérdések|întrebări\s+frecvente|често\s+задавани\s+въпроси|συχνές\s+ερωτήσεις|često\s+postavljana\s+pitanja|pogosta\s+vprašanja|korduma\s+kippuvad\s+küsimused|biežāk\s+uzdotie\s+jautājumi|dažniausiai\s+užduodami\s+klausimai|ceisteanna\s+coitianta|mistoqsijiet\s+frekwenti|dumondas\s+frequentas).*?<\/h2>/iu', $html, $mm2, PREG_OFFSET_CAPTURE) ? $mm2[0][1] : -1;
         if ($inserted < $faltan && $faq_pos >= 0) {
             $marker = "\n[IMAGEN: soporte visual para las preguntas frecuentes]\n";
             $html = substr($html, 0, $faq_pos) . $marker . substr($html, $faq_pos); $inserted++;
@@ -999,11 +999,31 @@ if (!function_exists('cbia_normalize_faq_heading')) {
 				'francés'   => 'Questions fréquentes',
 				'italiano'  => 'Domande frequenti',
 				'alemán'    => 'Häufig gestellte Fragen',
+				'holandés'  => 'Veelgestelde vragen',
+				'sueco'     => 'Vanliga frågor',
+				'danés'     => 'Ofte stillede spørgsmål',
+				'noruego'   => 'Ofte stilte spørsmål',
+				'finés'     => 'Usein kysytyt kysymykset',
+				'polaco'    => 'Najczęściej zadawane pytania',
+				'checo'     => 'Často kladené otázky',
+				'eslovaco'  => 'Často kladené otázky',
+				'húngaro'   => 'Gyakran ismételt kérdések',
+				'rumano'    => 'Întrebări frecvente',
+				'búlgaro'   => 'Често задавани въпроси',
+				'griego'    => 'Συχνές ερωτήσεις',
+				'croata'    => 'Često postavljana pitanja',
+				'esloveno'  => 'Pogosta vprašanja',
+				'estonio'   => 'Korduma kippuvad küsimused',
+				'letón'     => 'Biežāk uzdotie jautājumi',
+				'lituano'   => 'Dažniausiai užduodami klausimai',
+				'irlandés'  => 'Ceisteanna coitianta',
+				'maltés'    => 'Mistoqsijiet frekwenti',
+				'romanche'  => 'Dumondas frequentas',
 			);
 			$target = $map[$lang] ?? 'Preguntas frecuentes';
 		}
 
-		$pattern = '/<h2\b[^>]*>\s*(preguntas\s+frecuentes|faq|frequently\s+asked\s+questions|perguntas\s+frequentes|questions\s+fréquentes|domande\s+frequenti|häufig\s+gestellte\s+fragen)(?:\s*[\:\-\–\—]?\s*(?:\([^)]*\))?)?\s*<\/h2>/iu';
+		$pattern = '/<h2\b[^>]*>\s*(preguntas\s+frecuentes|faq|frequently\s+asked\s+questions|perguntas\s+frequentes|questions\s+fréquentes|domande\s+frequenti|häufig\s+gestellte\s+fragen|veelgestelde\s+vragen|vanliga\s+frågor|ofte\s+stillede\s+spørgsmål|ofte\s+stilte\s+spørsmål|usein\s+kysytyt\s+kysymykset|najczęściej\s+zadawane\s+pytania|často\s+kladené\s+otázky|gyakran\s+ismételt\s+kérdések|întrebări\s+frecvente|често\s+задавани\s+въпроси|συχνές\s+ερωτήσεις|često\s+postavljana\s+pitanja|pogosta\s+vprašanja|korduma\s+kippuvad\s+küsimused|biežāk\s+uzdotie\s+jautājumi|dažniausiai\s+užduodami\s+klausimai|ceisteanna\s+coitianta|mistoqsijiet\s+frekwenti|dumondas\s+frequentas)(?:\s*[\:\-\–\—]?\s*(?:\([^)]*\))?)?\s*<\/h2>/iu';
 		$replacement = '<h2>' . esc_html($target) . '</h2>';
 
 		$new = preg_replace($pattern, $replacement, (string)$html, 1);
