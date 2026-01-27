@@ -75,6 +75,49 @@ if (!function_exists('cbia_config_image_formats_catalog')) {
 	}
 }
 
+if (!function_exists('cbia_config_presets_catalog')) {
+	/**
+	 * Presets rápidos por modelo (UX).
+	 * Nota: solo tocamos unos pocos campos seguros.
+	 */
+	function cbia_config_presets_catalog(): array {
+		return [
+			'gpt-4.1-mini' => [
+				'label' => 'Preset GPT-4.1-mini (estable)',
+				'openai_model' => 'gpt-4.1-mini',
+				'openai_temperature' => 0.7,
+				'responses_max_output_tokens' => 6000,
+			],
+			'gpt-5-mini' => [
+				'label' => 'Preset GPT-5-mini (más creativo)',
+				'openai_model' => 'gpt-5-mini',
+				'openai_temperature' => 0.7,
+				'responses_max_output_tokens' => 8000,
+			],
+			'gpt-5.1-mini' => [
+				'label' => 'Preset GPT-5.1-mini (más coste/quality)',
+				'openai_model' => 'gpt-5.1-mini',
+				'openai_temperature' => 0.7,
+				'responses_max_output_tokens' => 8000,
+			],
+		];
+	}
+}
+
+if (!function_exists('cbia_config_apply_preset')) {
+	function cbia_config_apply_preset(string $preset_key, array $current): array {
+		$presets = cbia_config_presets_catalog();
+		if (!isset($presets[$preset_key])) return $current;
+		$p = $presets[$preset_key];
+
+		$current['openai_model'] = cbia_config_safe_model($p['openai_model'] ?? ($current['openai_model'] ?? 'gpt-4.1-mini'));
+		$current['openai_temperature'] = isset($p['openai_temperature']) ? (float)$p['openai_temperature'] : (float)($current['openai_temperature'] ?? 0.7);
+		$current['responses_max_output_tokens'] = isset($p['responses_max_output_tokens']) ? (int)$p['responses_max_output_tokens'] : (int)($current['responses_max_output_tokens'] ?? 6000);
+
+		return $current;
+	}
+}
+
 if (!function_exists('cbia_config_sanitize_image_format')) {
 	function cbia_config_sanitize_image_format($value, $fallback_key): string {
 		$value = sanitize_key((string)$value);
@@ -161,6 +204,19 @@ add_action('admin_init', function () {
 		: (int)($settings['responses_max_output_tokens'] ?? 6000);
 	if ($responses_max_output_tokens < 1500) $responses_max_output_tokens = 1500;
 	if ($responses_max_output_tokens > 12000) $responses_max_output_tokens = 12000;
+
+	// Preset rápido por modelo (si viene del botón de preset, manda sobre el resto)
+	$preset_key = isset($_POST['cbia_preset_model']) ? sanitize_text_field(wp_unslash($_POST['cbia_preset_model'])) : '';
+	if ($preset_key !== '' && function_exists('cbia_config_presets_catalog')) {
+		$presets = cbia_config_presets_catalog();
+		if (isset($presets[$preset_key])) {
+			$p = $presets[$preset_key];
+			$model = cbia_config_safe_model($p['openai_model'] ?? $model);
+			$temp = isset($p['openai_temperature']) ? (float)$p['openai_temperature'] : (float)$temp;
+			$responses_max_output_tokens = isset($p['responses_max_output_tokens']) ? (int)$p['responses_max_output_tokens'] : (int)$responses_max_output_tokens;
+			cbia_log('Preset aplicado en Config: ' . $preset_key, 'INFO');
+		}
+	}
 
 	$post_language = isset($_POST['post_language'])
 		? sanitize_text_field(wp_unslash($_POST['post_language']))
@@ -277,8 +333,33 @@ if (!function_exists('cbia_render_tab_config')) {
 			echo '<div class="notice notice-success is-dismissible"><p>Configuración guardada.</p></div>';
 		}
 
+		// Estado rápido (UX)
+		$stop_flag = function_exists('cbia_is_stop_requested') ? (bool)cbia_is_stop_requested() : false;
+		$next_ts = wp_next_scheduled('cbia_generation_event');
+		$next_txt = $next_ts ? date_i18n('Y-m-d H:i:s', (int)$next_ts) : 'no programado';
+		$blocked_current = function_exists('cbia_costes_is_model_blocked') ? cbia_costes_is_model_blocked((string)$s['openai_model']) : false;
+
+		$cost_settings = function_exists('cbia_costes_get_settings') ? cbia_costes_get_settings() : array();
+		$mult_global = (float)($cost_settings['real_adjust_multiplier'] ?? 1.0);
+		$mult_model = function_exists('cbia_costes_get_model_multiplier') ? (float)cbia_costes_get_model_multiplier((string)$s['openai_model'], $cost_settings) : 1.0;
+		$mult_effective = ($mult_global > 0 && $mult_global != 1.0) ? $mult_global : (($mult_model > 0 && $mult_model != 1.0) ? $mult_model : 1.0);
+		$mult_source = ($mult_global > 0 && $mult_global != 1.0) ? 'global' : (($mult_model > 0 && $mult_model != 1.0) ? 'modelo' : 'ninguno');
+
+		echo '<div class="notice notice-info" style="margin:8px 0 12px 0;">';
+		echo '<p style="margin:6px 0;"><strong>Estado rápido:</strong> ';
+		echo 'Modelo: <code>' . esc_html((string)$s['openai_model']) . '</code>';
+		if ($blocked_current) {
+			echo ' <span style="color:#b70000;font-weight:700;">(bloqueado)</span>';
+		}
+		echo ' &nbsp;|&nbsp; STOP: <strong>' . ($stop_flag ? 'activo' : 'no') . '</strong>';
+		echo ' &nbsp;|&nbsp; Próximo evento: <code>' . esc_html($next_txt) . '</code>';
+		echo ' &nbsp;|&nbsp; Ajuste REAL efectivo: <code>' . esc_html(number_format((float)$mult_effective, 3, ',', '.')) . ' €</code> <span class="description">(' . esc_html($mult_source) . ')</span>';
+		echo '</p>';
+		echo '</div>';
+
 		echo '<form method="post">';
 		wp_nonce_field('cbia_config_save_action', 'cbia_config_nonce');
+		echo '<input type="hidden" name="cbia_config_save" value="1" />';
 
 		echo '<table class="form-table" role="presentation">';
 
@@ -322,6 +403,17 @@ if (!function_exists('cbia_render_tab_config')) {
 		}
 		echo '</select>';
 		echo '<p class="description">Recomendado: <strong>' . esc_html($recommended) . '</strong>. El motor rechazará modelos marcados abajo (aunque estén seleccionados).</p>';
+		if (function_exists('cbia_config_presets_catalog')) {
+			$presets = cbia_config_presets_catalog();
+			echo '<div style="margin-top:6px;">';
+			echo '<span class="description" style="margin-right:8px;"><strong>Presets:</strong></span>';
+			foreach ($presets as $pk => $pd) {
+				$label = (string)($pd['label'] ?? $pk);
+				echo '<button type="submit" name="cbia_preset_model" value="' . esc_attr($pk) . '" class="button button-secondary" style="margin-right:6px;margin-bottom:6px;">' . esc_html($label) . '</button>';
+			}
+			echo '</div>';
+			echo '<p class="description">Los presets ajustan modelo, temperature y max tokens.</p>';
+		}
 		echo '</td></tr>';
 
 		echo '<tr><th scope="row"><label>Temperature</label></th><td>';
