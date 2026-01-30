@@ -31,6 +31,7 @@ if (!function_exists('cbia_config_handle_post')) {
 		$settings = cbia_get_settings();
 
 		$api_key = isset($_POST['openai_api_key']) ? sanitize_text_field(wp_unslash($_POST['openai_api_key'])) : '';
+		$openai_consent = !empty($_POST['openai_consent']) ? 1 : 0;
 		$model   = isset($_POST['openai_model']) ? sanitize_text_field(wp_unslash($_POST['openai_model'])) : ($settings['openai_model'] ?? '');
 		$model   = cbia_config_safe_model($model);
 
@@ -165,6 +166,7 @@ if (!function_exists('cbia_config_handle_post')) {
 
 		$partial = [
 			'openai_api_key'         => $api_key,
+			'openai_consent'         => $openai_consent,
 			'openai_model'           => $model,
 			'openai_temperature'     => $temp,
 			'post_length_variant'    => $post_length_variant,

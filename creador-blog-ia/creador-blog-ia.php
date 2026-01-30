@@ -7,6 +7,8 @@
  * Author: Angel
  * Requires at least: 6.9
  * Requires PHP: 8.2
+ * License: GPLv2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  */
 
 if (!defined('ABSPATH')) exit;
@@ -119,6 +121,7 @@ if (!function_exists('cbia_get_default_settings')) {
 		return [
 			// OpenAI
 			'openai_api_key'        => '',
+			'openai_consent'        => 0,
 			'openai_model'          => 'gpt-4.1-mini',
 			'openai_temperature'    => 0.7,
 

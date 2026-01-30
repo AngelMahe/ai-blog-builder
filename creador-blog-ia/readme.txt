@@ -13,6 +13,7 @@ Generación de entradas con IA (texto + imágenes), reanudación con checkpoint 
 == Description ==
 
 Plugin para crear posts completos con OpenAI (texto + imágenes) sin bloquear la pantalla. Procesa por tandas, reanuda con checkpoint, asigna categorías/etiquetas por reglas y permite rellenar imágenes pendientes (manual o por CRON).
+Este plugin usa la API de OpenAI únicamente cuando el usuario lo activa desde el panel y con consentimiento explícito en Configuración.
 
 Características clave:
 * 1 destacada + (images_limit - 1) imágenes en contenido

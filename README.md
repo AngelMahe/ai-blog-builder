@@ -21,6 +21,7 @@ Tabla de contenidos
 ## Qué hace y cómo funciona
 
 El plugin llama a OpenAI (Responses) para generar el HTML de un post y procesa marcadores de imagen con OpenAI Images. Crea la destacada y las imágenes internas respetando el límite configurado. Si alguna imagen falla, deja un marcador “pendiente” oculto para rellenarlo luego (manual o por CRON).
+Este plugin usa la API de OpenAI únicamente cuando el usuario lo activa desde el panel y con consentimiento explícito en Configuración.
 
 Puntos clave:
 - 1 destacada + (images_limit − 1) imágenes en contenido.

@@ -158,6 +158,24 @@ if (!function_exists('cbia_openai_api_key')) {
     }
 }
 
+if (!function_exists('cbia_openai_consent_ok')) {
+    /**
+     * User consent flag for OpenAI usage (required for external calls).
+     */
+    function cbia_openai_consent_ok(): bool {
+        if (function_exists('cbia_get_settings')) {
+            $settings = cbia_get_settings();
+            return !empty($settings['openai_consent']);
+        }
+        if (defined('CBIA_OPTION_SETTINGS')) {
+            $settings = get_option(CBIA_OPTION_SETTINGS, []);
+            return is_array($settings) && !empty($settings['openai_consent']);
+        }
+        $settings = get_option('cbia_settings', []);
+        return is_array($settings) && !empty($settings['openai_consent']);
+    }
+}
+
 if (!function_exists('cbia_http_headers_openai')) {
     /**
      * Build HTTP headers for OpenAI API calls.

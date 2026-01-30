@@ -19,6 +19,7 @@ if (!isset($s['post_language'])) $s['post_language'] = 'español';
 if (!isset($s['faq_heading_custom'])) $s['faq_heading_custom'] = '';
 if (!isset($s['responses_max_output_tokens'])) $s['responses_max_output_tokens'] = 6000;
 if (!isset($s['content_images_banner_enabled'])) $s['content_images_banner_enabled'] = 1;
+if (!isset($s['openai_consent'])) $s['openai_consent'] = 0;
 if (!isset($s['content_images_banner_css']) || trim((string)$s['content_images_banner_css']) === '') {
     $defaults = function_exists('cbia_get_default_settings') ? cbia_get_default_settings() : [];
     $s['content_images_banner_css'] = (string)($defaults['content_images_banner_css'] ?? '');
@@ -89,6 +90,10 @@ echo '<table class="form-table" role="presentation">';
 echo '<tr><th scope="row"><label>OpenAI API Key</label></th><td>';
 echo '<input type="password" name="openai_api_key" value="' . esc_attr((string)($s['openai_api_key'] ?? '')) . '" style="width:420px;" autocomplete="off" />';
 echo '<p class="description">Se guarda en la base de datos. Recomendado usar una key con permisos mínimos.</p>';
+echo '<p class="description"><strong>Transparencia:</strong> Este plugin usa la API de OpenAI para generar texto e imágenes. No se realizan llamadas sin acciones explícitas del usuario.</p>';
+echo '<label style="display:block;margin-top:6px;">';
+echo '<input type="checkbox" name="openai_consent" value="1" ' . checked(!empty($s['openai_consent']), true, false) . ' /> ';
+echo 'Confirmo que tengo permiso para enviar contenido a la API de OpenAI.</label>';
 echo '</td></tr>';
 
 // AUTOR POR DEFECTO
