@@ -101,7 +101,7 @@ $args = [
     'selected'         => (int)$s['default_author_id'],
     'show_option_none' => '— Automático (usuario actual / admin) —',
     'option_none_value'=> 0,
-    'who'              => 'authors',
+    'capability'       => ['edit_posts'],
     'class'            => 'regular-text',
 ];
 

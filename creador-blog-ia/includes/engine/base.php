@@ -139,3 +139,21 @@ if (!function_exists('cbia_is_stop_requested')) {
         return false;
     }
 }
+
+if (!function_exists('cbia_openai_api_key')) {
+    /**
+     * API key accessor (kept for legacy compatibility).
+     */
+    function cbia_openai_api_key(): string {
+        if (function_exists('cbia_get_settings')) {
+            $settings = cbia_get_settings();
+            return (string)($settings['openai_api_key'] ?? '');
+        }
+        if (defined('CBIA_OPTION_SETTINGS')) {
+            $settings = get_option(CBIA_OPTION_SETTINGS, []);
+            return is_array($settings) ? (string)($settings['openai_api_key'] ?? '') : '';
+        }
+        $settings = get_option('cbia_settings', []);
+        return is_array($settings) ? (string)($settings['openai_api_key'] ?? '') : '';
+    }
+}
