@@ -192,3 +192,16 @@ if (!function_exists('cbia_normalize_faq_heading')) {
         return $html;
     }
 }
+
+if (!function_exists('cbia_cleanup_post_html')) {
+    /**
+     * Limpieza final del HTML del post (artefactos, puntos sueltos, saltos).
+     */
+    function cbia_cleanup_post_html($html) {
+        $html = (string)$html;
+        if (function_exists('cbia_fix_content_artifacts')) {
+            $html = cbia_fix_content_artifacts($html);
+        }
+        return $html;
+    }
+}
