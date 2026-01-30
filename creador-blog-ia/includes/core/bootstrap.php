@@ -20,6 +20,7 @@ $cbia_new_files = array(
     CBIA_INCLUDES_DIR . 'admin/costs-admin.php',
     CBIA_INCLUDES_DIR . 'admin/oldposts-admin.php',
     CBIA_INCLUDES_DIR . 'admin/yoast-admin.php',
+    CBIA_INCLUDES_DIR . 'admin/diagnostics-admin.php',
     CBIA_INCLUDES_DIR . 'services/costs-service.php',
     CBIA_INCLUDES_DIR . 'services/blog-service.php',
     CBIA_INCLUDES_DIR . 'services/oldposts-service.php',

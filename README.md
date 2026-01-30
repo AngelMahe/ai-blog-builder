@@ -9,6 +9,7 @@ Tabla de contenidos
   - Blog (creación con checkpoint)
   - Costes (estimación y real)
   - Yoast/SEO
+  - Diagnóstico
 - Marcadores de imagen y pendientes
 - Programación y CRON
 - Logs y diagnóstico
@@ -58,6 +59,11 @@ Puntos clave:
 ### 4) Yoast/SEO (opcional)
 - Genera metadescripción básica y focus keyphrase. Si tienes Yoast SEO activo, se aprovechan sus metas y hook para ampliar el relleno.
 - Si no usas Yoast, el post se crea igualmente (las metas quedan como metadatos estándar; no es requisito).
+
+### 5) Diagnóstico
+- Resumen del entorno (WP, PHP, límites, debug).
+- Comprobación rápida de permisos de escritura y estado de la API Key.
+- Últimas líneas del log del plugin para soporte.
 
 ## Marcadores de imagen y pendientes
 

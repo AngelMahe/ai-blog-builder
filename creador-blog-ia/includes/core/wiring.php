@@ -71,6 +71,9 @@ if (!function_exists('cbia_container')) {
         if (class_exists('CBIA_Yoast_Admin')) {
             $container->set('yoast_admin', new CBIA_Yoast_Admin($container->get('yoast_service')));
         }
+        if (class_exists('CBIA_Diagnostics_Admin')) {
+            $container->set('diagnostics_admin', new CBIA_Diagnostics_Admin());
+        }
 
         // Jobs / scheduler
         if (class_exists('CBIA_Scheduler')) {
@@ -88,6 +91,7 @@ if (!function_exists('cbia_container')) {
             $router->register_tab_object($container->get('oldposts_admin'));
             $router->register_tab_object($container->get('costs_admin'));
             $router->register_tab_object($container->get('yoast_admin'));
+            $router->register_tab_object($container->get('diagnostics_admin'));
         }
 
         return $container;

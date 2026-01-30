@@ -19,6 +19,7 @@ Características clave:
 * Marcadores `[IMAGEN: ...]` insertados automáticamente si faltan; los sobrantes se eliminan
 * Log en vivo y STOP seguro
 * Costes: estimación rápida y cálculo REAL por llamada (con precio fijo por imagen opcional)
+* Diagnóstico rápido del entorno y del plugin
 * Compatible con Yoast SEO (opcional). El plugin NO requiere Yoast; si está activo, se integran metas y hooks.
 
 == Installation ==
