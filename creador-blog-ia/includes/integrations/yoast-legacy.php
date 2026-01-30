@@ -587,11 +587,12 @@ if (!function_exists('cbia_render_tab_yoast')) {
 // Si en algún punto quieres refresco tipo "log en vivo" por JS, puedes usar este endpoint:
 add_action('wp_ajax_cbia_get_yoast_log', function () {
 	if (!current_user_can('manage_options')) wp_send_json_error('forbidden', 403);
-	if (isset($_REQUEST['_ajax_nonce']) && function_exists('wp_verify_nonce')) {
-		$nonce = sanitize_text_field((string)$_REQUEST['_ajax_nonce']);
-		if ($nonce !== '' && !wp_verify_nonce($nonce, 'cbia_ajax_nonce')) {
-			wp_send_json_error('bad_nonce', 403);
-		}
+	if (!isset($_REQUEST['_ajax_nonce']) || !function_exists('wp_verify_nonce')) {
+		wp_send_json_error('bad_nonce', 403);
+	}
+	$nonce = sanitize_text_field((string)$_REQUEST['_ajax_nonce']);
+	if ($nonce === '' || !wp_verify_nonce($nonce, 'cbia_ajax_nonce')) {
+		wp_send_json_error('bad_nonce', 403);
 	}
 	nocache_headers();
 	if (function_exists('cbia_get_log')) {
