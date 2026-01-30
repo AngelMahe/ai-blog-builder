@@ -176,9 +176,11 @@ Activar CRON hourly para rellenar imágenes pendientes
         if (typeof ajaxurl === 'undefined') return;
         const logUrl = ajaxurl + '?action=cbia_get_log&_ajax_nonce=' + encodeURIComponent(<?php echo wp_json_encode($ajax_nonce); ?>);
         fetch(logUrl, { credentials:'same-origin' })
-        .then(r => r.json())
-        .then(data => {
+        .then(r => r.text())
+        .then(text => {
             if(!logBox) return;
+            let data = null;
+            try { data = JSON.parse(text); } catch(e) { return; }
             if (data && data.success) {
                 logBox.value = extractLogText(data.data);
             } else {
@@ -198,8 +200,10 @@ Activar CRON hourly para rellenar imágenes pendientes
         if (typeof ajaxurl === 'undefined') return;
         const statusUrl = ajaxurl + '?action=cbia_get_checkpoint_status&_ajax_nonce=' + encodeURIComponent(<?php echo wp_json_encode($ajax_nonce); ?>);
         fetch(statusUrl, { credentials:'same-origin' })
-        .then(r => r.json())
-        .then(data => {
+        .then(r => r.text())
+        .then(text => {
+            let data = null;
+            try { data = JSON.parse(text); } catch(e) { return; }
             if (!data || !data.success || !data.data) return;
             if (cpStatus) cpStatus.textContent = data.data.status || '';
             if (cpLast) cpLast.textContent = data.data.last || '';
@@ -221,19 +225,19 @@ Activar CRON hourly para rellenar imágenes pendientes
             fd.append('_ajax_nonce', <?php echo wp_json_encode($ajax_nonce); ?>);
 
             fetch(ajaxurl, { method:'POST', credentials:'same-origin', body: fd })
-            .then(r => r.json())
-            .then(data => {
+            .then(r => r.text())
+            .then(text => {
+                let data = null;
+                try { data = JSON.parse(text); } catch(e) { data = null; }
                 if(data && data.success){
                     btn.textContent = 'En marcha (ver log)…';
                     setTimeout(()=>{ btn.disabled=false; btn.textContent=old; }, 4000);
                 }else{
                     btn.disabled=false; btn.textContent=old;
-                    alert((data && data.data) ? data.data : 'No se pudo iniciar');
                 }
             })
-            .catch(e => {
+            .catch(() => {
                 btn.disabled=false; btn.textContent=old;
-                alert('Error: ' + e.message);
             });
         });
     }

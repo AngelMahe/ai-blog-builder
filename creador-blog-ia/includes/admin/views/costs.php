@@ -182,10 +182,13 @@ if ($notice === 'saved') {
 }
 
 if (is_array($calibration_info)) {
+    $actual_eur = (float)($calibration_info['actual_eur'] ?? 0);
+    $estimated_eur = (float)($calibration_info['estimated_eur'] ?? 0);
+    $suggested = (float)($calibration_info['suggested'] ?? 1);
     echo '<div class="notice notice-success is-dismissible"><p><strong>Calibración aplicada.</strong> ' .
-    'Billing: ' . esc_html(number_format((float)$calibration_info['actual_eur'], 4, ',', '.')) . ' € | ' .
-    'Real calculado: ' . esc_html(number_format((float)$calibration_info['estimated_eur'], 4, ',', '.')) . ' € | ' .
-    'Multiplicador: <code>' . esc_html(number_format((float)$calibration_info['suggested'], 4, ',', '.')) . '</code></p></div>';
+    'Billing: ' . esc_html(number_format($actual_eur, 4, ',', '.')) . ' € | ' .
+    'Real calculado: ' . esc_html(number_format($estimated_eur, 4, ',', '.')) . ' € | ' .
+    'Multiplicador: <code>' . esc_html(number_format($suggested, 4, ',', '.')) . '</code></p></div>';
 }
 ?>
 <div class="wrap" style="padding-left:0;">
