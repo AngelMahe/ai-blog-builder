@@ -13,14 +13,21 @@ if (!function_exists('cbia_load_legacy_modules')) {
             }
             return;
         }
-        $modules = array(
-            CBIA_INCLUDES_DIR . 'legacy/cbia-config.php',
-            CBIA_INCLUDES_DIR . 'engine/engine.php',
-            CBIA_INCLUDES_DIR . 'legacy/cbia-blog.php',
-            CBIA_INCLUDES_DIR . 'legacy/cbia-oldposts.php',
-            CBIA_INCLUDES_DIR . 'legacy/cbia-costes.php',
-            CBIA_INCLUDES_DIR . 'legacy/cbia-yoast.php',
-        );
+        // Si el core nuevo estÃ¡ cargado, evitamos wrappers legacy.
+        if (class_exists('CBIA_Admin_Router')) {
+            $modules = array(
+                CBIA_INCLUDES_DIR . 'engine/engine.php',
+            );
+        } else {
+            $modules = array(
+                CBIA_INCLUDES_DIR . 'legacy/cbia-config.php',
+                CBIA_INCLUDES_DIR . 'engine/engine.php',
+                CBIA_INCLUDES_DIR . 'legacy/cbia-blog.php',
+                CBIA_INCLUDES_DIR . 'legacy/cbia-oldposts.php',
+                CBIA_INCLUDES_DIR . 'legacy/cbia-costes.php',
+                CBIA_INCLUDES_DIR . 'legacy/cbia-yoast.php',
+            );
+        }
 
         foreach ($modules as $f) {
             if (file_exists($f)) {
