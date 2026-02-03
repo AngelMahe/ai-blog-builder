@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Creador Blog IA
- * Description: Genera entradas con IA (texto + marcadores de imágenes), programa con intervalos, asigna categorías/etiquetas, guarda tokens/usage y estima costes. Incluye actualización de posts antiguos y módulo Yoast.
- * Version: 3.0
+ * Description: Genera entradas con IA (texto + 1 imagen destacada) con reanudacion por checkpoint y log en vivo.
+ * Version: 1.0.0
  *
  * Author: Angel
  * Requires at least: 6.9
@@ -13,7 +13,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-if (!defined('CBIA_VERSION')) define('CBIA_VERSION', '3.0');
+if (!defined('CBIA_VERSION')) define('CBIA_VERSION', '1.0.0');
 if (!defined('CBIA_PLUGIN_FILE')) define('CBIA_PLUGIN_FILE', __FILE__);
 if (!defined('CBIA_PLUGIN_DIR')) define('CBIA_PLUGIN_DIR', plugin_dir_path(__FILE__));
 if (!defined('CBIA_PLUGIN_URL')) define('CBIA_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -24,7 +24,7 @@ if (!defined('CBIA_OPTION_LOG_COUNTER')) define('CBIA_OPTION_LOG_COUNTER', 'cbia
 if (!defined('CBIA_OPTION_STOP')) define('CBIA_OPTION_STOP', 'cbia_stop_generation');
 if (!defined('CBIA_OPTION_CHECKPOINT')) define('CBIA_OPTION_CHECKPOINT', 'cbia_checkpoint');
 
-// Bootstrap nueva estructura (v3.0)
+// Bootstrap estructura (FREE 1.0.0)
 $cbia_bootstrap = CBIA_INCLUDES_DIR . 'core/bootstrap.php';
 if (file_exists($cbia_bootstrap)) {
 	require_once $cbia_bootstrap;
@@ -127,7 +127,7 @@ if (!function_exists('cbia_get_default_settings')) {
 
 			// Longitud / imágenes
 			'post_length_variant'   => 'medium',
-			'images_limit'          => 3,
+			'images_limit'          => 1,
 			'prompt_single_all'     => "Escribe un artículo de blog en HTML (sin <h1>) sobre: {title}\nIncluye marcadores de imagen del tipo [IMAGEN: descripción].",
 			'prompt_img_intro'      => '',
 			'prompt_img_body'       => '',
@@ -299,4 +299,5 @@ if (!function_exists('cbia_render_admin_page')) {
 		echo '</div>';
 	}
 }
+
 

@@ -1,6 +1,6 @@
 <?php
 /**
- * Wiring for the 2.3 structure (safe, no behavior change yet).
+ * Wiring for the FREE 1.0.0 structure.
  */
 
 if (!defined('ABSPATH')) exit;
@@ -22,20 +22,8 @@ if (!function_exists('cbia_container')) {
         if (class_exists('CBIA_Log_Service')) {
             $container->set('log_service', new CBIA_Log_Service());
         }
-        if (class_exists('CBIA_Costs_Repo')) {
-            $container->set('costs_repo', new CBIA_Costs_Repo());
-        }
-        if (class_exists('CBIA_Costs_Service')) {
-            $container->set('costs_service', new CBIA_Costs_Service($container->get('costs_repo')));
-        }
         if (class_exists('CBIA_Blog_Service')) {
             $container->set('blog_service', new CBIA_Blog_Service());
-        }
-        if (class_exists('CBIA_Oldposts_Repo')) {
-            $container->set('oldposts_repo', new CBIA_Oldposts_Repo());
-        }
-        if (class_exists('CBIA_Oldposts_Service')) {
-            $container->set('oldposts_service', new CBIA_Oldposts_Service($container->get('oldposts_repo')));
         }
         if (class_exists('CBIA_OpenAI_Client')) {
             $container->set('openai_client', new CBIA_OpenAI_Client());
@@ -48,19 +36,9 @@ if (!function_exists('cbia_container')) {
             $container->set('yoast_client', new CBIA_Yoast_Client());
         }
 
-        if (class_exists('CBIA_Yoast_Service')) {
-            $container->set('yoast_service', new CBIA_Yoast_Service($container->get('yoast_client')));
-        }
-
         // Admin
         if (class_exists('CBIA_Admin_Router')) {
             $container->set('admin_router', new CBIA_Admin_Router());
-        }
-        if (class_exists('CBIA_Costs_Admin')) {
-            $container->set('costs_admin', new CBIA_Costs_Admin($container->get('costs_service')));
-        }
-        if (class_exists('CBIA_Oldposts_Admin')) {
-            $container->set('oldposts_admin', new CBIA_Oldposts_Admin($container->get('oldposts_service')));
         }
         if (class_exists('CBIA_Config_Admin')) {
             $container->set('config_admin', new CBIA_Config_Admin($container->get('settings_service')));
@@ -68,19 +46,10 @@ if (!function_exists('cbia_container')) {
         if (class_exists('CBIA_Blog_Admin')) {
             $container->set('blog_admin', new CBIA_Blog_Admin($container->get('blog_service')));
         }
-        if (class_exists('CBIA_Yoast_Admin')) {
-            $container->set('yoast_admin', new CBIA_Yoast_Admin($container->get('yoast_service')));
-        }
-        if (class_exists('CBIA_Diagnostics_Admin')) {
-            $container->set('diagnostics_admin', new CBIA_Diagnostics_Admin());
-        }
 
         // Jobs / scheduler
         if (class_exists('CBIA_Scheduler')) {
             $container->set('scheduler', new CBIA_Scheduler());
-        }
-        if (class_exists('CBIA_Oldposts_Job')) {
-            $container->set('oldposts_job', new CBIA_Oldposts_Job());
         }
 
         // Register tabs on router (if available)
@@ -88,10 +57,7 @@ if (!function_exists('cbia_container')) {
         if ($router) {
             $router->register_tab_object($container->get('config_admin'));
             $router->register_tab_object($container->get('blog_admin'));
-            $router->register_tab_object($container->get('oldposts_admin'));
-            $router->register_tab_object($container->get('costs_admin'));
-            $router->register_tab_object($container->get('yoast_admin'));
-            $router->register_tab_object($container->get('diagnostics_admin'));
+            // FREE: solo Config + Blog
         }
 
         return $container;

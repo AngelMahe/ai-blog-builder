@@ -103,7 +103,7 @@ if (!class_exists('CBIA_Admin_Router')) {
             $current = $this->get_current_tab($tabs);
 
             echo '<div class="wrap">';
-            echo '<h1>Creador Blog IA <small style="font-weight:normal;opacity:.7;">v' . esc_html(defined('CBIA_VERSION') ? CBIA_VERSION : '2.3') . '</small></h1>';
+            echo '<h1>Creador Blog IA <small style="font-weight:normal;opacity:.7;">v' . esc_html(defined('CBIA_VERSION') ? CBIA_VERSION : '1.0.0') . '</small></h1>';
 
             echo '<h2 class="nav-tab-wrapper">';
             foreach ($tabs as $key => $t) {

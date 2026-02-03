@@ -1,6 +1,6 @@
 <?php
 /**
- * Runtime helpers (v2.3)
+ * Runtime helpers (FREE 1.0.0)
  *
  * Keep execution time generous for long tasks.
  */

@@ -25,28 +25,19 @@ if (!class_exists('CBIA_Blog_Service')) {
             $settings = $this->get_settings();
 
             if (!empty($post_unslashed['cbia_form']) && $post_unslashed['cbia_form'] === 'blog_save' && check_admin_referer('cbia_blog_save_nonce')) {
-                $mode = (string)($post_unslashed['title_input_mode'] ?? 'manual');
-                $settings['title_input_mode'] = in_array($mode, array('manual','csv'), true) ? $mode : 'manual';
-
-                $settings['manual_titles'] = (string)($post_unslashed['manual_titles'] ?? '');
-                $settings['csv_url'] = trim((string)($post_unslashed['csv_url'] ?? ''));
-
-                $dt_local = trim((string)($post_unslashed['first_publication_datetime_local'] ?? ''));
-                if ($dt_local !== '') {
-                    $dt_local = str_replace('T',' ', $dt_local);
-                    if (preg_match('/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}$/', $dt_local)) $dt_local .= ':00';
-                    $settings['first_publication_datetime'] = $dt_local;
-                } else {
-                    $settings['first_publication_datetime'] = '';
-                }
-
-                $settings['publication_interval'] = max(1, intval($post_unslashed['publication_interval'] ?? 5));
-                $settings['enable_cron_fill'] = !empty($post_unslashed['enable_cron_fill']) ? 1 : 0;
+                $settings['title_input_mode'] = 'manual';
+                $settings['manual_titles'] = isset($post_unslashed['manual_titles'])
+                    ? (string)($post_unslashed['manual_titles'])
+                    : '';
+                $settings['csv_url'] = '';
+                $settings['first_publication_datetime'] = '';
+                $settings['publication_interval'] = 1;
+                $settings['enable_cron_fill'] = 0;
 
                 update_option('cbia_settings', $settings, false);
 
                 if (function_exists('cbia_log_message')) {
-                    cbia_log_message("[INFO] Blog: configuración guardada (títulos + automatización).");
+                    cbia_log_message('[INFO] Blog: configuracion guardada (titulos manuales).');
                 }
                 $saved_notice = 'guardado';
             }
@@ -54,31 +45,20 @@ if (!class_exists('CBIA_Blog_Service')) {
             if (!empty($post_unslashed['cbia_form']) && $post_unslashed['cbia_form'] === 'blog_actions' && check_admin_referer('cbia_blog_actions_nonce')) {
                 $action = sanitize_text_field((string)($post_unslashed['cbia_action'] ?? ''));
 
-                if ($action === 'test_config') {
-                    if (function_exists('cbia_run_test_configuration')) cbia_run_test_configuration();
-                    else if (function_exists('cbia_log_message')) cbia_log_message('[WARN] Falta cbia_run_test_configuration().');
-                    $saved_notice = 'test';
-
-                } elseif ($action === 'stop_generation') {
+                if ($action === 'stop_generation') {
                     if (function_exists('cbia_set_stop_flag')) cbia_set_stop_flag(true);
-                    if (function_exists('cbia_log_message')) cbia_log_message("[INFO] Stop activado por usuario.");
+                    if (function_exists('cbia_log_message')) cbia_log_message('[INFO] Stop activado por usuario.');
                     $saved_notice = 'stop';
-
-                } elseif ($action === 'fill_pending_imgs') {
-                    if (function_exists('cbia_set_stop_flag')) cbia_set_stop_flag(false);
-                    if (function_exists('cbia_run_fill_pending_images')) cbia_run_fill_pending_images(10);
-                    else if (function_exists('cbia_log_message')) cbia_log_message('[WARN] Falta cbia_run_fill_pending_images().');
-                    $saved_notice = 'pending';
 
                 } elseif ($action === 'clear_checkpoint') {
                     if (function_exists('cbia_checkpoint_clear')) cbia_checkpoint_clear();
                     delete_option('_cbia_last_scheduled_at');
-                    if (function_exists('cbia_log_message')) cbia_log_message("[INFO] Checkpoint limpiado + _cbia_last_scheduled_at reseteado.");
+                    if (function_exists('cbia_log_message')) cbia_log_message('[INFO] Checkpoint limpiado + _cbia_last_scheduled_at reseteado.');
                     $saved_notice = 'checkpoint';
 
                 } elseif ($action === 'clear_log') {
                     if (function_exists('cbia_clear_log')) cbia_clear_log();
-                    if (function_exists('cbia_log_message')) cbia_log_message("[INFO] Log limpiado manualmente.");
+                    if (function_exists('cbia_log_message')) cbia_log_message('[INFO] Log limpiado manualmente.');
                     $saved_notice = 'log';
                 }
             }

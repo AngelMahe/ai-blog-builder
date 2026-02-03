@@ -1,6 +1,6 @@
 <?php
 /**
- * CBIA Loader (v2.3 scaffolding)
+ * CBIA Loader (FREE 1.0.0)
  *
  * Central point to register hooks and admin tabs.
  * Keep this light; real logic lives in services/admin classes.
