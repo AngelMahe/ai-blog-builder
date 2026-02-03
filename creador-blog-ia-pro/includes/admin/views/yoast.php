@@ -22,6 +22,30 @@ $log = $service && method_exists($service, 'get_log')
 <div class="wrap">
 <h2>Yoast</h2>
 
+<?php
+$yoast_active = defined('WPSEO_VERSION');
+$faq_block_available = false;
+if (function_exists('cbia_yoast_faq_block_available')) {
+    $faq_block_available = cbia_yoast_faq_block_available();
+} elseif (class_exists('WP_Block_Type_Registry')) {
+    $registry = WP_Block_Type_Registry::get_instance();
+    $faq_block_available = is_object($registry) && $registry->is_registered('yoast/faq-block');
+}
+?>
+
+<p>
+<strong>FAQ Schema (Yoast)</strong>: 
+<?php
+if (!$yoast_active) {
+    echo '<span style="color:#b70000;">Yoast no está activo.</span> Instala/activa Yoast SEO para usar el bloque FAQ.';
+} elseif ($faq_block_available) {
+    echo '<span style="color:#1e7e34;font-weight:600;">Bloque FAQ disponible.</span> Se convertirá automáticamente la sección FAQ a bloque Yoast.';
+} else {
+    echo '<span style="color:#b70000;">Bloque FAQ NO disponible.</span> Asegúrate de usar Gutenberg y habilitar los bloques de Yoast.';
+}
+?>
+</p>
+
 <p>
 <strong>Semáforo</strong> aquí significa rellenar:
 <code>_yoast_wpseo_linkdex</code> (SEO) y <code>_yoast_wpseo_content_score</code> (Legibilidad),

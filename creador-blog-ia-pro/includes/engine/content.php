@@ -95,6 +95,127 @@ if (!function_exists('cbia_section_label')) {
     }
 }
 
+if (!function_exists('cbia_yoast_faq_block_available')) {
+    function cbia_yoast_faq_block_available() {
+        if (!defined('WPSEO_VERSION')) return false;
+        if (!class_exists('WP_Block_Type_Registry')) return false;
+        $registry = WP_Block_Type_Registry::get_instance();
+        return is_object($registry) && $registry->is_registered('yoast/faq-block');
+    }
+}
+
+if (!function_exists('cbia_extract_faq_items_from_html')) {
+    function cbia_extract_faq_items_from_html($html) {
+        $items = [];
+        $html = (string)$html;
+
+        // localizar encabezado FAQ
+        if (!preg_match('/<h2[^>]*>\\s*(FAQ|Preguntas frecuentes|Preguntas Frecuentes|Questions? ?FAQs?|FAQs)\\s*<\\/h2>/i', $html, $m, PREG_OFFSET_CAPTURE)) {
+            return $items;
+        }
+        $h2_pos = (int)$m[0][1];
+        $h2_len = strlen($m[0][0]);
+
+        // fin del bloque FAQ: siguiente h2 o final
+        $next_h2_pos = false;
+        if (preg_match('/<h2[^>]*>/i', $html, $m2, PREG_OFFSET_CAPTURE, $h2_pos + $h2_len)) {
+            $next_h2_pos = (int)($m2[0][1] ?? 0);
+        }
+        $faq_end = $next_h2_pos !== false ? $next_h2_pos : strlen($html);
+
+        $section = substr($html, $h2_pos + $h2_len, $faq_end - ($h2_pos + $h2_len));
+
+        // encontrar cada h3 dentro de FAQ y su respuesta
+        if (!preg_match_all('/<h3[^>]*>.*?<\\/h3>/is', $section, $h3s, PREG_OFFSET_CAPTURE)) {
+            return $items;
+        }
+
+        $count = count($h3s[0]);
+        for ($i = 0; $i < $count; $i++) {
+            $h3_html = (string)$h3s[0][$i][0];
+            $h3_pos  = (int)$h3s[0][$i][1];
+            $h3_len  = strlen($h3_html);
+            $next_pos = ($i + 1 < $count) ? (int)$h3s[0][$i + 1][1] : strlen($section);
+
+            $question = trim(wp_strip_all_tags($h3_html));
+            if ($question === '') continue;
+
+            $answer_html = trim(substr($section, $h3_pos + $h3_len, $next_pos - ($h3_pos + $h3_len)));
+            if ($answer_html === '') continue;
+
+            // asegura al menos un <p>
+            if (!preg_match('/<p\\b/i', $answer_html)) {
+                $answer_html = '<p>' . esc_html($answer_html) . '</p>';
+            }
+
+            $items[] = [
+                'question' => $question,
+                'answer_html' => $answer_html,
+            ];
+        }
+
+        return $items;
+    }
+}
+
+if (!function_exists('cbia_build_yoast_faq_block')) {
+    function cbia_build_yoast_faq_block($items) {
+        if (empty($items)) return '';
+        $out = "<!-- wp:yoast/faq-block -->\n";
+        foreach ($items as $it) {
+            $json = wp_json_encode(['question' => (string)$it['question']]);
+            $out .= "<!-- wp:yoast/faq-block/faq-item {$json} -->\n";
+            $out .= (string)$it['answer_html'] . "\n";
+            $out .= "<!-- /wp:yoast/faq-block/faq-item -->\n";
+        }
+        $out .= "<!-- /wp:yoast/faq-block -->";
+        return $out;
+    }
+}
+
+if (!function_exists('cbia_convert_faq_to_yoast_block')) {
+    /**
+     * Devuelve [html, did, status]
+     */
+    function cbia_convert_faq_to_yoast_block($html) {
+        $html = (string)$html;
+        if (!cbia_yoast_faq_block_available()) {
+            return [$html, false, 'Yoast FAQ no disponible'];
+        }
+
+        // localizar encabezado FAQ
+        if (!preg_match('/<h2[^>]*>\\s*(FAQ|Preguntas frecuentes|Preguntas Frecuentes|Questions? ?FAQs?|FAQs)\\s*<\\/h2>/i', $html, $m, PREG_OFFSET_CAPTURE)) {
+            return [$html, false, 'No se detectó sección FAQ'];
+        }
+        $h2_html = (string)$m[0][0];
+        $h2_pos  = (int)$m[0][1];
+        $h2_len  = strlen($h2_html);
+
+        // fin del bloque FAQ: siguiente h2 o final
+        $next_h2_pos = false;
+        if (preg_match('/<h2[^>]*>/i', $html, $m2, PREG_OFFSET_CAPTURE, $h2_pos + $h2_len)) {
+            $next_h2_pos = (int)($m2[0][1] ?? 0);
+        }
+        $faq_end = $next_h2_pos !== false ? $next_h2_pos : strlen($html);
+
+        $items = cbia_extract_faq_items_from_html($html);
+        if (empty($items)) {
+            return [$html, false, 'No se detectaron preguntas FAQ'];
+        }
+
+        $block = cbia_build_yoast_faq_block($items);
+        if ($block === '') {
+            return [$html, false, 'No se pudo construir el bloque FAQ'];
+        }
+
+        $before = substr($html, 0, $h2_pos);
+        $after  = substr($html, $faq_end);
+
+        $new_html = $before . $h2_html . "\n" . $block . "\n" . $after;
+        return [$new_html, true, 'Bloque FAQ Yoast insertado'];
+    }
+}
+
 if (!function_exists('cbia_detect_marker_section')) {
     function cbia_detect_marker_section($html, $marker_pos, $is_first) {
         $len = strlen((string)$html);

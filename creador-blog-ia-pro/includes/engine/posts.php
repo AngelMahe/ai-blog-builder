@@ -161,6 +161,15 @@ if (!function_exists('cbia_create_single_blog_post')) {
 		$text_html = cbia_fix_bracket_headings($text_html);
 		// Normaliza el título de FAQ según idioma/config
 		$text_html = cbia_normalize_faq_heading($text_html);
+		// Si Yoast FAQ Block está disponible, convierte FAQs a bloque
+		if (function_exists('cbia_convert_faq_to_yoast_block')) {
+			list($text_html, $faq_block_ok, $faq_block_status) = cbia_convert_faq_to_yoast_block($text_html);
+			if ($faq_block_ok) {
+				cbia_log("FAQ Yoast: bloque insertado correctamente", 'INFO');
+			} elseif (!empty($faq_block_status)) {
+				cbia_log("FAQ Yoast: {$faq_block_status}", 'INFO');
+			}
+		}
 		cbia_log("Texto IA OK: generado HTML para '{$title}'", 'INFO');
 
         // 3) Procesar marcadores de imagen
