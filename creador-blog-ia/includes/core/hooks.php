@@ -10,6 +10,9 @@ if (!function_exists('cbia_register_core_hooks')) {
         if (!has_action('admin_enqueue_scripts', 'cbia_admin_enqueue_inline')) {
             add_action('admin_enqueue_scripts', 'cbia_admin_enqueue_inline');
         }
+        if (!has_action('admin_head-edit.php', 'cbia_admin_posts_list_button')) {
+            add_action('admin_head-edit.php', 'cbia_admin_posts_list_button');
+        }
 
         if (!has_action('wp_ajax_cbia_get_log', 'cbia_ajax_get_log')) {
             add_action('wp_ajax_cbia_get_log', 'cbia_ajax_get_log');
@@ -26,6 +29,22 @@ if (!function_exists('cbia_register_core_hooks')) {
         if (!has_action('wp_ajax_cbia_start_generation', 'cbia_ajax_start_generation')) {
             add_action('wp_ajax_cbia_start_generation', 'cbia_ajax_start_generation');
         }
+    }
+}
+
+if (!function_exists('cbia_admin_posts_list_button')) {
+    function cbia_admin_posts_list_button() {
+        if (!current_user_can('manage_options')) return;
+        if (!function_exists('get_current_screen')) return;
+
+        $screen = get_current_screen();
+        if (!$screen || $screen->base !== 'edit' || $screen->post_type !== 'post') return;
+
+        $url = admin_url('admin.php?page=cbia&tab=blog');
+        $label = 'Añadir entrada con IA';
+
+        echo "<style>.cbia-add-ai{margin-left:6px;background:#2271b1;color:#fff;border-color:#2271b1}</style>\n";
+        echo "<script>(function(){function addBtn(){var target=document.querySelector('.wrap .page-title-action');if(!target||document.querySelector('.cbia-add-ai'))return;var a=document.createElement('a');a.className='page-title-action cbia-add-ai';a.href=" . json_encode($url) . ";a.textContent=" . json_encode($label) . ";target.insertAdjacentElement('afterend',a);}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',addBtn);}else{addBtn();}})();</script>\n";
     }
 }
 
