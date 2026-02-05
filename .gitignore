@@ -6,6 +6,7 @@
 # SO y editores
 .DS_Store
 creador-blog-ia-pro/
+ai-blog-builder-pro/
 Thumbs.db
 *.swp
 *.swo
@@ -42,6 +43,9 @@ coverage/
 *.zip
 *.tar
 *.tar.gz
+
+# Carpetas de referencia locales (no van al repo)
+gpt3-ai-content-generator.2.3.67/
 
 # Archivos temporales
 *.tmp
