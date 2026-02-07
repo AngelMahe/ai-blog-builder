@@ -1,0 +1,380 @@
+.cbia-shell {
+    --abb-cyan: #22D3EE;
+    --abb-blue: #018AAA;
+    --abb-pink: #F43F5E;
+    --abb-grad: linear-gradient(135deg, #22D3EE 0%, #018AAA 100%);
+    --abb-border: rgba(34, 211, 238, 0.28);
+    --abb-text: #0f172a;
+    --abb-muted: #64748b;
+    font-family: Inter, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--abb-text);
+    background: #f6f9fc;
+    padding: 6px 0 24px;
+}
+
+.cbia-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 10px 0 18px;
+}
+
+.cbia-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.cbia-logo {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+}
+
+.cbia-title {
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.cbia-version {
+    font-size: 12px;
+    color: var(--abb-muted);
+}
+
+.cbia-layout {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.cbia-sidebar {
+    width: 220px;
+    padding: 0 0 16px;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    min-height: calc(100vh - 120px);
+    align-self: stretch;
+}
+
+.cbia-sidebar-title {
+    display: none;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--abb-muted);
+    margin: 6px 0 10px 8px;
+}
+
+.cbia-sidebar-brand {
+    margin: 6px 0 14px;
+    padding: 0 6px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.cbia-sidebar-brand img {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    display: block;
+}
+
+.cbia-sidebar-logo {
+    display: none;
+}
+
+.cbia-sidebar-nav {
+    list-style: none;
+    margin: 0;
+    padding: 0 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.cbia-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    color: var(--abb-blue);
+    text-decoration: none;
+    border: 1px solid transparent;
+}
+
+.cbia-nav-link .dashicons {
+    color: var(--abb-blue);
+}
+
+.cbia-nav-text {
+    line-height: 1;
+}
+
+.cbia-nav-link.is-active {
+    background: rgba(34, 211, 238, 0.12);
+    font-weight: 600;
+}
+
+.cbia-main {
+    flex: 1;
+    min-width: 0;
+    padding-left: 0;
+}
+
+.cbia-content-card {
+    background: #fff;
+    border: 1px solid rgba(34, 211, 238, 0.45);
+    border-radius: 16px;
+    padding: 18px 20px;
+    box-shadow: 0 6px 18px rgba(2, 132, 199, 0.08);
+}
+
+.cbia-card {
+    background: #fff;
+    border: 1px solid var(--abb-border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.cbia-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--abb-blue);
+    margin: 0 0 12px 0;
+}
+
+.abb-provider-card {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0 0 6px 0;
+}
+
+.abb-provider-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: flex-end;
+}
+
+.abb-field label {
+    display: block;
+    font-size: 12px;
+    color: var(--abb-muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.abb-provider-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--abb-border);
+    background: #fff;
+    font-weight: 600;
+    color: var(--abb-blue);
+    min-width: 160px;
+}
+
+.abb-provider-pill img {
+    width: 18px;
+    height: 18px;
+}
+
+.abb-select {
+    min-width: 220px;
+    max-width: 320px;
+}
+
+.abb-api-row {
+    margin-top: 14px;
+}
+
+.abb-api-row label {
+    display: block;
+    font-size: 12px;
+    color: var(--abb-muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.abb-api-input {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.abb-api-input .abb-input {
+    width: 360px;
+    max-width: 100%;
+}
+
+.abb-consent {
+    display: block;
+    margin-top: 8px;
+}
+
+.cbia-section .form-table {
+    margin-top: 0;
+}
+
+.cbia-section .form-table th {
+    width: 220px;
+}
+
+.cbia-usage-lite {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    max-width: 1100px;
+}
+
+.cbia-shell .button {
+    border-radius: 10px;
+}
+
+.cbia-shell .button-primary {
+    background: var(--abb-grad);
+    border: none;
+    color: #fff;
+}
+
+.cbia-shell .button-primary:hover {
+    filter: brightness(0.95);
+    color: #fff;
+}
+
+.cbia-shell .button-secondary {
+    border-color: var(--abb-cyan);
+    color: var(--abb-blue);
+    background: #fff;
+}
+
+.cbia-add-ai {
+    margin-left: 6px;
+    background: var(--abb-grad);
+    color: #fff;
+    border: none;
+}
+
+.cbia-add-ai:hover {
+    filter: brightness(0.95);
+    color: #fff;
+}
+.cbia-badge-pro {
+    background: var(--abb-pink);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+}
+
+.abb-provider-select {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+}
+
+.abb-provider-select img {
+    width: 18px;
+    height: 18px;
+}
+
+.abb-provider-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--abb-border);
+    background: #fff;
+    min-width: 160px;
+    cursor: pointer;
+}
+
+.abb-provider-label {
+    font-weight: 600;
+    color: var(--abb-text);
+}
+
+.abb-provider-caret {
+    margin-left: auto;
+    color: var(--abb-muted);
+}
+
+.abb-provider-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    width: 220px;
+    background: #fff;
+    border: 1px solid var(--abb-border);
+    border-radius: 14px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    padding: 8px;
+    display: none;
+    z-index: 50;
+}
+
+.abb-provider-menu.is-open {
+    display: block;
+}
+
+.abb-provider-option {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+}
+
+.abb-provider-option img {
+    width: 18px;
+    height: 18px;
+}
+
+.abb-provider-option.is-active,
+.abb-provider-option:hover {
+    background: rgba(34, 211, 238, 0.12);
+}
+/* PRO layout override to match FREE */
+.cbia-layout { gap: 0 !important; }
+.cbia-sidebar { width: 240px !important; padding: 16px 8px 16px 0 !important; background: transparent !important; border-right: none !important; border-radius: 0 !important; min-height: calc(100vh - 120px) !important; align-self: stretch !important; }
+.cbia-sidebar-logo { display: flex !important; align-items: center !important; justify-content: flex-start !important; padding: 4px 0 16px 0 !important; }
+.cbia-sidebar-logo img { width: 84px !important; height: auto !important; }
+.cbia-main { flex: 1 !important; min-width: 0 !important; padding-left: 18px !important; }
+/* Ensure content card matches FREE */
+.cbia-content-card { background: #fff !important; border: 1px solid rgba(34, 211, 238, 0.38) !important; border-radius: 12px !important; padding: 18px 20px !important; box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important; }
+/* PRO override: match FREE shell */
+.cbia-shell { background: transparent !important; padding: 0 !important; }
+.cbia-layout { gap: 0 !important; }
+.cbia-sidebar { width: 240px !important; padding: 16px 8px 16px 0 !important; }
+.cbia-sidebar-logo { display: flex !important; }
+.cbia-main { padding-left: 18px !important; }
+.abb-provider-disabled-note {
+    font-size: 12px;
+    color: var(--abb-muted);
+    margin-top: 6px;
+}
