@@ -2,6 +2,11 @@
 
 Genera entradas completas con IA (requiere la versión gratuita activa) (texto + imágenes) en una sola pasada. Incluye marcadores de imagen inteligentes, programación con reanudación por checkpoint, rellenado de imágenes pendientes y cálculo de costes (estimado y real).
 
+## Novedades 3.0.3
+- Preview SSE más robusto con fallback automático y cierre correcto del stream.
+- Nuevo card de Article Preview con wordcount, imagen destacada y SEO en vivo.
+- preview_token persistente para crear post desde la previsualización (borrador/publicar/programar).
+
 Tabla de contenidos
 - Qué hace y cómo funciona
 - Flujo de trabajo (pestañas)
