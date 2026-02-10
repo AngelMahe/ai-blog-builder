@@ -1,4 +1,4 @@
-# AI Blog Builder Pro Pro (WordPress) v3.0.1
+# AI Blog Builder Pro Pro (WordPress) v3.0.3
 
 Genera entradas completas con IA (requiere la versión gratuita activa) (texto + im�genes) en una sola pasada. Incluye marcadores de imagen inteligentes, programaci�n con reanudaci�n por checkpoint, rellenado de im�genes pendientes y c�lculo de costes (estimado y real).
 

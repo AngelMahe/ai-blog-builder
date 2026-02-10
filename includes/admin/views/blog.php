@@ -19,6 +19,19 @@ $settings = $service && method_exists($service, 'get_settings')
 
 $mode = $settings['title_input_mode'] ?? 'manual';
 $manual_titles = $settings['manual_titles'] ?? '';
+$blog_prompt_mode = function_exists('cbia_prompt_get_mode')
+    ? cbia_prompt_get_mode((array)$settings)
+    : sanitize_key((string)($settings['blog_prompt_mode'] ?? 'recommended'));
+if (!in_array($blog_prompt_mode, array('recommended', 'legacy'), true)) $blog_prompt_mode = 'recommended';
+$blog_prompt_editable = (string)($settings['blog_prompt_editable'] ?? '');
+if ($blog_prompt_editable === '' && function_exists('cbia_prompt_recommended_editable_default')) {
+    $blog_prompt_editable = cbia_prompt_recommended_editable_default();
+}
+$blog_prompt_editable = function_exists('cbia_prompt_sanitize_editable_block')
+    ? cbia_prompt_sanitize_editable_block($blog_prompt_editable)
+    : $blog_prompt_editable;
+$legacy_full_prompt = (string)($settings['legacy_full_prompt'] ?? '');
+$legacy_placeholder = (string)($settings['prompt_single_all'] ?? '');
 $csv_url = $settings['csv_url'] ?? '';
 
 $first_dt = $settings['first_publication_datetime'] ?? '';
@@ -51,6 +64,14 @@ $log_text = is_array($log_payload) ? (string)($log_payload['log'] ?? '') : '';
 
 if ($saved_notice === 'guardado') {
     echo '<div class="notice notice-success is-dismissible"><p>Configuracion de Blog guardada.</p></div>';
+} elseif ($saved_notice === 'guardado_warn') {
+    $warns = get_transient('cbia_blog_prompt_warnings');
+    if (!is_array($warns)) $warns = array();
+    $msg = 'Configuracion de Blog guardada con avisos.';
+    if (!empty($warns)) {
+        $msg .= ' ' . implode(' ', array_map('sanitize_text_field', $warns));
+    }
+    echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html($msg) . '</p></div>';
 } elseif ($saved_notice === 'test') {
     echo '<div class="notice notice-success is-dismissible"><p>Prueba ejecutada. Revisa el log.</p></div>';
 } elseif ($saved_notice === 'stop') {
@@ -85,6 +106,7 @@ $ajax_nonce = wp_create_nonce('cbia_ajax_nonce');
 <td>
 <textarea name="manual_titles" rows="6" style="width:100%;max-width:1100px;" placeholder="Un titulo por linea"><?php echo esc_textarea($manual_titles); ?></textarea>
 <p class="description">Guarda y luego pulsa "Crear Blogs (con reanudacion)".</p>
+
 <p style="margin-top:10px;">
 <button type="submit" class="button button-primary">Guardar</button>
 </p>
@@ -96,8 +118,56 @@ $ajax_nonce = wp_create_nonce('cbia_ajax_nonce');
 <input type="text" name="csv_url" value="<?php echo esc_attr($csv_url); ?>" style="width:100%;max-width:1100px;" />
 </td>
 </tr>
+<tr>
+<th>Prompt del contenido del blog</th>
+<td>
+<div class="cbia-blog-prompt-panel" style="padding:12px;border:1px solid #dcdcde;border-radius:8px;max-width:1100px;">
+<p class="description" style="margin-top:0;">Prompt editorial optimizado para Google Discover e insercion de marcadores de imagen. Puedes ajustar el estilo, pero hay reglas fijas para evitar cortes y mantener compatibilidad.</p>
+<p class="description" style="margin-top:0;">El idioma se aplica automaticamente segun el selector de idioma y no se edita desde el prompt.</p>
+
+<p style="margin:8px 0;">
+<label><input type="radio" name="blog_prompt_mode" value="recommended" <?php checked($blog_prompt_mode, 'recommended'); ?> /> Prompt recomendado (seguro)</label>
+</p>
+<p style="margin:8px 0;">
+<label style="display:inline-flex;align-items:center;gap:6px;">
+    <input type="checkbox" id="cbia_toggle_advanced_prompt" <?php checked($blog_prompt_mode, 'legacy'); ?> />
+    Mostrar opciones avanzadas (compatibilidad)
+</label>
+</p>
+<div id="cbia_advanced_prompt_wrap" style="display:none;">
+<p style="margin:8px 0;">
+<label><input type="radio" name="blog_prompt_mode" value="legacy" <?php checked($blog_prompt_mode, 'legacy'); ?> /> Prompt avanzado (compatibilidad)</label>
+</p>
+<p class="description" style="margin-top:0;">Advertencia: este modo permite control total y puede romper formato, idioma o marcadores de imagen.</p>
+</div>
+
+<label style="display:inline-flex;align-items:center;gap:6px;">
+    <input type="checkbox" id="cbia_toggle_prompt_edit" />
+    Editar prompt
+</label>
+
+<div id="cbia_prompt_edit_wrap" style="display:none;margin-top:10px;">
+    <div id="cbia_prompt_edit_recommended" style="display:none;">
+        <textarea name="blog_prompt_editable" id="cbia_blog_prompt_editable" rows="12" style="width:100%;"><?php echo esc_textarea($blog_prompt_editable); ?></textarea>
+        <input type="hidden" id="cbia_blog_prompt_default" value="<?php echo esc_attr(function_exists('cbia_prompt_recommended_editable_default') ? cbia_prompt_recommended_editable_default() : ''); ?>" />
+        <p style="margin-top:8px;">
+            <button type="button" class="button" id="cbia_btn_restore_prompt">Restaurar prompt recomendado</button>
+        </p>
+    </div>
+    <div id="cbia_prompt_edit_legacy" style="display:none;">
+        <textarea name="legacy_full_prompt" rows="12" style="width:100%;" placeholder="Prompt legado completo"><?php echo esc_textarea($legacy_full_prompt !== '' ? $legacy_full_prompt : $legacy_placeholder); ?></textarea>
+        <p class="description">Modo avanzado: se usa el prompt completo historico para compatibilidad.</p>
+    </div>
+</div>
+</div>
+</td>
+</tr>
 </table>
 </form>
+
+<?php
+$preview_titles = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string)$manual_titles))));
+?>
 
 <h2>Publicacion y clasificacion</h2>
 <form method="post">
@@ -159,7 +229,7 @@ $language_options = [
     'romanche'  => 'Romanche',
 ];
 $current_language = (string)($settings['post_language'] ?? 'Espanol');
-echo '<select name="post_language" style="width:220px;">';
+echo '<select name="post_language" class="abb-select" style="width:220px;">';
 foreach ($language_options as $val => $label) {
     echo '<option value="' . esc_attr($val) . '" ' . selected($current_language, $val, false) . '>' . esc_html($label) . '</option>';
 }
@@ -250,6 +320,94 @@ Activar CRON hourly para rellenar imagenes pendientes
 <button type="submit" class="button" name="cbia_action" value="clear_log">Limpiar log</button>
 </p>
 </form>
+
+<h2>Vista previa del articulo</h2>
+<section id="cbia-preview-panel" class="cbia-preview-card" aria-live="polite" data-open="true">
+<header class="cbia-preview-header">
+<div class="cbia-preview-title-wrap">
+<h3 class="cbia-preview-title">ARTICLE PREVIEW</h3>
+<span id="cbia-preview-wordcount" class="cbia-wordcount">0 words</span>
+<span id="cbia_preview_mode_badge" class="cbia-preview-mode">STREAM</span>
+</div>
+<div class="cbia-preview-head-actions">
+<button type="button" class="button button-primary" id="cbia_btn_open_preview_modal">Generacion con previsualizacion</button>
+<button type="button" class="button cbia-preview-icon-btn" id="cbia_preview_btn_copy" title="Copiar texto"><span class="dashicons dashicons-admin-page" aria-hidden="true"></span></button>
+<button type="button" class="button cbia-preview-icon-btn" id="cbia_preview_btn_expand" title="Expandir preview"><span class="dashicons dashicons-editor-expand" aria-hidden="true"></span></button>
+<button type="button" class="button cbia-preview-icon-btn" id="cbia_preview_btn_edit" title="Editar preview"><span class="dashicons dashicons-edit" aria-hidden="true"></span></button>
+<button type="button" class="button cbia-preview-icon-btn cbia-preview-icon-danger" id="cbia_preview_btn_clear" title="Limpiar output"><span class="dashicons dashicons-trash" aria-hidden="true"></span></button>
+</div>
+</header>
+
+<div class="cbia-preview-controls">
+<label for="cbia_preview_title">Titulo</label>
+<select id="cbia_preview_title" class="abb-select" style="width:420px;">
+<?php if (!empty($preview_titles)): ?>
+    <?php foreach ($preview_titles as $pt): ?>
+        <option value="<?php echo esc_attr($pt); ?>"><?php echo esc_html($pt); ?></option>
+    <?php endforeach; ?>
+<?php else: ?>
+    <option value="">(Primero anade titulos manuales y guarda)</option>
+<?php endif; ?>
+</select>
+<select id="cbia_preview_mode" class="abb-select" style="width:220px;">
+    <option value="fast">Preview rapido (sin imagen real)</option>
+    <option value="full">Preview completo (genera imagenes)</option>
+</select>
+</div>
+
+<div class="cbia-preview-body">
+<aside class="cbia-preview-media">
+<div id="cbia-featured-image-wrap" class="cbia-featured-image" data-state="idle">
+<div class="cbia-image-placeholder">Featured image preview</div>
+</div>
+<input id="cbia-preview-token" type="hidden" value="">
+<div id="cbia_preview_runtime" class="cbia-preview-runtime" style="display:none;">
+<div id="cbia_preview_phase" class="cbia-preview-phase">
+<span id="cbia_phase_texto" style="padding:4px 8px;border:1px solid #dcdcde;border-radius:999px;background:#f6f7f7;">Texto</span>
+<span id="cbia_phase_img" style="padding:4px 8px;border:1px solid #dcdcde;border-radius:999px;background:#f6f7f7;">Imagenes</span>
+<span id="cbia_phase_ready" style="padding:4px 8px;border:1px solid #dcdcde;border-radius:999px;background:#f6f7f7;">Listo</span>
+</div>
+</div>
+</aside>
+<main class="cbia-preview-main">
+<div id="cbia-preview-status" class="cbia-status">Esperando generacion...</div>
+<article id="cbia-preview-content" class="cbia-preview-content"></article>
+<div id="cbia_preview_edit_panel" style="display:none;">
+<p style="margin:8px 0;"><strong>Editar antes de crear</strong></p>
+<p style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0;">
+<label for="cbia_preview_edit_title">Titulo</label>
+<input type="text" id="cbia_preview_edit_title" style="width:420px;" />
+</p>
+<p style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0;">
+<button type="button" class="button" id="cbia_btn_preview_edit_toggle" style="display:none;">&#9998; Editar preview</button>
+<button type="button" class="button" id="cbia_btn_preview_edit_save" style="display:none;">Guardar cambios</button>
+<button type="button" class="button" id="cbia_btn_preview_edit_cancel" style="display:none;">Cancelar</button>
+</p>
+<p class="description">Edita directamente el contenido del preview con el boton de editar. No se muestra HTML crudo.</p>
+</div>
+</main>
+</div>
+
+<section class="cbia-seo-card" aria-label="SEO and metadata">
+<h4>SEO &amp; METADATA</h4>
+<p><strong>Excerpt:</strong> <span id="cbia-seo-excerpt"></span></p>
+<p><strong>Tags:</strong> <span id="cbia-seo-tags"></span></p>
+<p><strong>Focus:</strong> <span id="cbia-seo-focus"></span></p>
+<p><strong>Meta description:</strong> <span id="cbia-seo-meta"></span></p>
+</section>
+
+<footer class="cbia-preview-actions">
+<div class="cbia-preview-schedule">
+<label for="cbia_preview_post_date">Programar</label>
+<input type="datetime-local" id="cbia_preview_post_date" />
+</div>
+<div class="cbia-preview-actions-buttons">
+<button id="cbia-create-draft" type="button" class="button" disabled>Guardar borrador</button>
+<button id="cbia-create-publish" type="button" class="button button-primary" disabled>Publicar</button>
+<button id="cbia-create-schedule" type="button" class="button" disabled>Programar</button>
+</div>
+</footer>
+</section>
 
 <h2>Log</h2>
 <textarea id="cbia_log" rows="14" readonly style="width:100%;max-width:1100px;background:#f9f9f9;"><?php echo esc_textarea($log_text); ?></textarea>
@@ -346,6 +504,703 @@ Activar CRON hourly para rellenar imagenes pendientes
             });
         });
     }
+
+    const previewBtn = document.getElementById('cbia_btn_open_preview_modal');
+    const previewPanel = document.getElementById('cbia-preview-panel');
+    const previewTitle = document.getElementById('cbia_preview_title');
+    const previewMode = document.getElementById('cbia_preview_mode');
+    const previewRuntime = document.getElementById('cbia_preview_runtime');
+    const previewStatus = document.getElementById('cbia-preview-status');
+    const previewWordCount = document.getElementById('cbia-preview-wordcount');
+    const previewModeBadge = document.getElementById('cbia_preview_mode_badge');
+    const phaseTexto = document.getElementById('cbia_phase_texto');
+    const phaseImg = document.getElementById('cbia_phase_img');
+    const phaseReady = document.getElementById('cbia_phase_ready');
+    const previewSeoExcerpt = document.getElementById('cbia-seo-excerpt');
+    const previewSeoTags = document.getElementById('cbia-seo-tags');
+    const previewSeoFocus = document.getElementById('cbia-seo-focus');
+    const previewSeoMeta = document.getElementById('cbia-seo-meta');
+    const previewFeaturedWrap = document.getElementById('cbia-featured-image-wrap');
+    const previewHtml = document.getElementById('cbia-preview-content');
+    const previewTokenField = document.getElementById('cbia-preview-token');
+    const previewBtnCopy = document.getElementById('cbia_preview_btn_copy');
+    const previewBtnExpand = document.getElementById('cbia_preview_btn_expand');
+    const previewBtnClear = document.getElementById('cbia_preview_btn_clear');
+    const previewBtnEdit = document.getElementById('cbia_preview_btn_edit');
+    const previewEditPanel = document.getElementById('cbia_preview_edit_panel');
+    const previewEditTitle = document.getElementById('cbia_preview_edit_title');
+    const previewEditToggleBtn = document.getElementById('cbia_btn_preview_edit_toggle');
+    const previewEditSaveBtn = document.getElementById('cbia_btn_preview_edit_save');
+    const previewEditCancelBtn = document.getElementById('cbia_btn_preview_edit_cancel');
+    const previewPostDate = document.getElementById('cbia_preview_post_date');
+    const createDraftBtn = document.getElementById('cbia-create-draft');
+    const createPublishBtn = document.getElementById('cbia-create-publish');
+    const createScheduleBtn = document.getElementById('cbia-create-schedule');
+    const promptModeChecked = () => document.querySelector('input[name="blog_prompt_mode"]:checked');
+    const promptEditable = document.getElementById('cbia_blog_prompt_editable');
+    const legacyPrompt = document.querySelector('textarea[name="legacy_full_prompt"]');
+    const postLanguage = document.querySelector('select[name="post_language"]');
+    const imagesLimit = document.querySelector('select[name="images_limit"]');
+    let previewToken = '';
+    let previewOriginalHtml = '';
+    let progressiveQueue = [];
+    let progressiveTimer = null;
+    let progressiveLastHtml = '';
+    let previewExpanded = false;
+    let progressiveMode = 'stream';
+
+    function setPreviewStatus(msg, isError){
+        if (!previewStatus) return;
+        previewStatus.textContent = msg || '';
+        previewStatus.style.color = isError ? '#b32d2e' : '#50575e';
+    }
+    function setWordCount(count){
+        if (!previewWordCount) return;
+        const n = Number(count || 0);
+        previewWordCount.textContent = (n > 0 ? n : 0) + ' words';
+    }
+    function setPreviewModeBadge(mode){
+        if (!previewModeBadge) return;
+        if (mode === 'classic') {
+            previewModeBadge.textContent = 'SIMULADO';
+            previewModeBadge.style.borderColor = '#fed7aa';
+            previewModeBadge.style.color = '#9a3412';
+            previewModeBadge.style.background = '#fff7ed';
+            return;
+        }
+        previewModeBadge.textContent = 'STREAM';
+        previewModeBadge.style.borderColor = '#bae6fd';
+        previewModeBadge.style.color = '#0c4a6e';
+        previewModeBadge.style.background = '#f0f9ff';
+    }
+    function calcWordCountFromHtml(html){
+        const text = String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        if (!text) return 0;
+        return text.split(' ').length;
+    }
+    function setFeaturedState(status, message, url){
+        if (!previewFeaturedWrap) return;
+        const state = status || 'idle';
+        previewFeaturedWrap.dataset.state = state;
+        if (state === 'done' && url) {
+            previewFeaturedWrap.innerHTML = '<img src="' + String(url) + '" alt="" />';
+            return;
+        }
+        if (state === 'error') {
+            previewFeaturedWrap.innerHTML = '<div class="cbia-image-placeholder">No se pudo generar la imagen destacada.</div>';
+            return;
+        }
+        if (state === 'placeholder') {
+            previewFeaturedWrap.innerHTML = '<div class="cbia-image-placeholder">' + (message || 'Preview rapido: imagen destacada en placeholder.') + '</div>';
+            return;
+        }
+        previewFeaturedWrap.innerHTML = '<div class="cbia-image-placeholder">' + (message || 'Imagen destacada en proceso...') + '</div>';
+    }
+    function renderSeoMeta(excerpt, tags, focus, metaDescription){
+        if (previewSeoExcerpt) previewSeoExcerpt.textContent = excerpt || '';
+        if (previewSeoTags) previewSeoTags.textContent = Array.isArray(tags) ? tags.join(', ') : (tags || '');
+        if (previewSeoFocus) previewSeoFocus.textContent = focus || '';
+        if (previewSeoMeta) previewSeoMeta.textContent = metaDescription || '';
+    }
+    function processPreviewHtml(html){
+        const raw = String(html || '');
+        if (!raw) return '';
+        return raw.replace(/\[IMAGEN:[^\]]*\]/gi, function(marker){
+            const label = marker.replace(/^\[IMAGEN:\s*/i, '').replace(/\]$/, '').trim();
+            return '<figure class="cbia-preview-img-ph"><span class="dashicons dashicons-format-image" aria-hidden="true"></span><span class="description">' + (label ? label : 'Imagen en proceso...') + '</span></figure>';
+        });
+    }
+    function clearProgressiveQueue(){
+        progressiveQueue = [];
+        progressiveLastHtml = '';
+        progressiveMode = 'stream';
+        setPreviewModeBadge('stream');
+        if (progressiveTimer) {
+            clearTimeout(progressiveTimer);
+            progressiveTimer = null;
+        }
+    }
+    function runProgressiveQueue(){
+        if (progressiveTimer || !progressiveQueue.length) return;
+        function nextDelayByRemaining(remaining){
+            if (progressiveMode === 'classic') {
+                if (remaining > 24) return 55;
+                if (remaining > 16) return 75;
+                if (remaining > 10) return 95;
+                if (remaining > 6) return 115;
+                if (remaining > 3) return 135;
+                return 160;
+            }
+            if (remaining > 24) return 30;
+            if (remaining > 16) return 42;
+            if (remaining > 10) return 56;
+            if (remaining > 6) return 70;
+            if (remaining > 3) return 84;
+            return 100;
+        }
+        const tick = function(){
+            if (!progressiveQueue.length) {
+                progressiveTimer = null;
+                return;
+            }
+            const next = progressiveQueue.shift();
+            if (previewHtml && typeof next.html === 'string') {
+                previewHtml.innerHTML = processPreviewHtml(next.html);
+            }
+            const liveCount = Number(next.word_count || 0) > 0 ? Number(next.word_count || 0) : calcWordCountFromHtml(processPreviewHtml(next.html || ''));
+            setWordCount(liveCount);
+            progressiveTimer = setTimeout(tick, nextDelayByRemaining(progressiveQueue.length));
+        };
+        progressiveTimer = setTimeout(tick, progressiveMode === 'classic' ? 70 : 35);
+    }
+    function enqueueProgressiveHtml(html, wordCount){
+        if (typeof html !== 'string') return;
+        const clean = html.trim();
+        if (!clean || clean === progressiveLastHtml) return;
+        progressiveLastHtml = clean;
+        progressiveQueue.push({
+            html: html,
+            word_count: Number(wordCount || 0),
+        });
+        runProgressiveQueue();
+    }
+    function splitHtmlProgressChunks(html){
+        const source = String(html || '');
+        if (!source.trim()) return [];
+        const parts = source.split(/(<\/(?:p|h2|h3|ul|ol|li|figure|div)>|<img\b[^>]*>)/i);
+        const chunks = [];
+        let acc = '';
+        for (let i = 0; i < parts.length; i++) {
+            const part = String(parts[i] || '');
+            if (!part) continue;
+            acc += part;
+            if (/(<\/(?:p|h2|h3|ul|ol|li|figure|div)>|<img\b[^>]*>)$/i.test(part)) {
+                chunks.push(acc);
+            }
+        }
+        if (!chunks.length || chunks[chunks.length - 1] !== acc) {
+            chunks.push(acc);
+        }
+        return chunks;
+    }
+    function enqueueClassicSimulation(finalHtml){
+        clearProgressiveQueue();
+        progressiveMode = 'classic';
+        setPreviewModeBadge('classic');
+        const chunks = splitHtmlProgressChunks(finalHtml);
+        if (!chunks.length) {
+            enqueueProgressiveHtml(finalHtml, calcWordCountFromHtml(finalHtml));
+            return;
+        }
+        for (let i = 0; i < chunks.length; i++) {
+            enqueueProgressiveHtml(chunks[i], calcWordCountFromHtml(chunks[i]));
+        }
+    }
+    function setPreviewEditMode(enabled){
+        if (!previewHtml) return;
+        previewHtml.contentEditable = enabled ? 'true' : 'false';
+        previewHtml.style.outline = enabled ? '2px solid #0ea5e9' : 'none';
+        previewHtml.style.cursor = enabled ? 'text' : 'default';
+        if (previewEditToggleBtn) previewEditToggleBtn.style.display = enabled ? 'none' : '';
+        if (previewEditSaveBtn) previewEditSaveBtn.style.display = enabled ? '' : 'none';
+        if (previewEditCancelBtn) previewEditCancelBtn.style.display = enabled ? '' : 'none';
+    }
+    function copyPreviewText(){
+        if (!previewHtml) return;
+        const text = (previewHtml.innerText || previewHtml.textContent || '').trim();
+        if (!text) {
+            setPreviewStatus('No hay contenido para copiar.', true);
+            return;
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function(){
+                setPreviewStatus('Contenido copiado al portapapeles.', false);
+            }).catch(function(){
+                setPreviewStatus('No se pudo copiar al portapapeles.', true);
+            });
+            return;
+        }
+        const aux = document.createElement('textarea');
+        aux.value = text;
+        document.body.appendChild(aux);
+        aux.select();
+        try {
+            document.execCommand('copy');
+            setPreviewStatus('Contenido copiado al portapapeles.', false);
+        } catch (e) {
+            setPreviewStatus('No se pudo copiar al portapapeles.', true);
+        }
+        document.body.removeChild(aux);
+    }
+    function togglePreviewExpand(){
+        if (!previewPanel) return;
+        previewExpanded = !previewExpanded;
+        if (previewExpanded) {
+            previewPanel.classList.add('cbia-preview-expanded');
+            document.body.classList.add('cbia-preview-lock');
+            if (previewBtnExpand) previewBtnExpand.title = 'Contraer preview';
+        } else {
+            previewPanel.classList.remove('cbia-preview-expanded');
+            document.body.classList.remove('cbia-preview-lock');
+            if (previewBtnExpand) previewBtnExpand.title = 'Expandir preview';
+        }
+    }
+    function clearPreviewOutput(){
+        clearProgressiveQueue();
+        previewToken = '';
+        previewOriginalHtml = '';
+        if (previewTokenField) previewTokenField.value = '';
+        if (previewHtml) previewHtml.innerHTML = '';
+        if (createDraftBtn) createDraftBtn.disabled = true;
+        if (createPublishBtn) createPublishBtn.disabled = true;
+        if (createScheduleBtn) createScheduleBtn.disabled = true;
+        setWordCount(0);
+        renderSeoMeta('', [], '', '');
+        setFeaturedState('placeholder', 'Sin contenido generado.', '');
+        setPreviewStatus('Preview limpiado.', false);
+        if (previewEditPanel) previewEditPanel.style.display = 'none';
+        setPreviewEditMode(false);
+    }
+    function setPhase(activeKey, hasError){
+        const map = {
+            texto: phaseTexto,
+            img: phaseImg,
+            ready: phaseReady
+        };
+        Object.keys(map).forEach(function(key){
+            const node = map[key];
+            if (!node) return;
+            const isActive = key === activeKey;
+            node.style.background = isActive ? (hasError ? '#fee2e2' : '#e0f2fe') : '#f6f7f7';
+            node.style.borderColor = isActive ? (hasError ? '#fca5a5' : '#7dd3fc') : '#dcdcde';
+            node.style.color = isActive ? (hasError ? '#991b1b' : '#0c4a6e') : '#50575e';
+            node.style.fontWeight = isActive ? '600' : '400';
+        });
+    }
+
+    function renderPreviewResult(data, options){
+        if (!data) return;
+        const opts = options || {};
+        const skipImmediateHtml = !!opts.skipImmediateHtml;
+        if (!skipImmediateHtml) {
+            clearProgressiveQueue();
+            if (previewHtml) previewHtml.innerHTML = processPreviewHtml(data.preview_html || '');
+        }
+        setWordCount(calcWordCountFromHtml(processPreviewHtml(data.preview_html || '')));
+        if (previewEditPanel) previewEditPanel.style.display = '';
+        if (previewEditTitle) previewEditTitle.value = data.title || '';
+        previewOriginalHtml = data.preview_html || '';
+        setPreviewEditMode(false);
+        previewToken = data.preview_token || '';
+        if (previewTokenField) previewTokenField.value = previewToken || '';
+        if (createDraftBtn) createDraftBtn.disabled = !previewToken;
+        if (createPublishBtn) createPublishBtn.disabled = !previewToken;
+        if (createScheduleBtn) createScheduleBtn.disabled = !previewToken;
+        renderSeoMeta(data.excerpt || '', data.tags || [], data.focus_keyphrase || '', data.meta_description || '');
+        if (Array.isArray(data.images) && data.images.length) {
+            const firstWithUrl = data.images.find(row => row && row.url);
+            if (firstWithUrl && firstWithUrl.url) {
+                setFeaturedState('done', 'Imagen destacada lista.', firstWithUrl.url);
+            }
+        }
+    }
+    if (previewEditToggleBtn) {
+        previewEditToggleBtn.addEventListener('click', function(){
+            if (!previewHtml) return;
+            previewOriginalHtml = previewHtml.innerHTML || '';
+            setPreviewEditMode(true);
+            previewHtml.focus();
+        });
+    }
+    if (previewEditSaveBtn) {
+        previewEditSaveBtn.addEventListener('click', function(){
+            if (!previewHtml) return;
+            previewOriginalHtml = previewHtml.innerHTML || '';
+            setPreviewEditMode(false);
+            setPreviewStatus('Cambios del preview guardados.', false);
+        });
+    }
+    if (previewEditCancelBtn) {
+        previewEditCancelBtn.addEventListener('click', function(){
+            if (!previewHtml) return;
+            previewHtml.innerHTML = previewOriginalHtml || '';
+            setPreviewEditMode(false);
+            setPreviewStatus('Edicion cancelada.', false);
+        });
+    }
+    if (previewBtnCopy) {
+        previewBtnCopy.addEventListener('click', copyPreviewText);
+    }
+    if (previewBtnExpand) {
+        previewBtnExpand.addEventListener('click', togglePreviewExpand);
+    }
+    if (previewBtnClear) {
+        previewBtnClear.addEventListener('click', clearPreviewOutput);
+    }
+    if (previewBtnEdit) {
+        previewBtnEdit.addEventListener('click', function(){
+            if (previewEditPanel) previewEditPanel.style.display = '';
+            if (!previewHtml) return;
+            previewOriginalHtml = previewHtml.innerHTML || '';
+            setPreviewEditMode(true);
+            previewHtml.focus();
+        });
+    }
+    function ensurePreviewVisible(){
+        if (!previewPanel) return;
+        previewPanel.dataset.open = 'true';
+        previewPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    document.addEventListener('keydown', function(evt){
+        if (evt.key !== 'Escape') return;
+        if (previewExpanded) {
+            togglePreviewExpand();
+            return;
+        }
+    });
+
+    function runPreviewClassic(titleVal, modeOverride){
+        const fd = new FormData();
+        fd.append('action', 'cbia_preview_article');
+        fd.append('_ajax_nonce', <?php echo wp_json_encode($ajax_nonce); ?>);
+        fd.append('title', titleVal);
+        fd.append('preview_mode', modeOverride || (previewMode ? previewMode.value : 'fast'));
+        fd.append('post_language', postLanguage ? postLanguage.value : '');
+        fd.append('images_limit', imagesLimit ? imagesLimit.value : '3');
+        const modeInput = promptModeChecked();
+        fd.append('blog_prompt_mode', modeInput ? modeInput.value : 'recommended');
+        fd.append('blog_prompt_editable', promptEditable ? promptEditable.value : '');
+        fd.append('legacy_full_prompt', legacyPrompt ? legacyPrompt.value : '');
+
+        return fetch(ajaxurl, { method:'POST', credentials:'same-origin', body: fd })
+        .then(r => r.text())
+        .then(text => {
+            let data = null;
+            try { data = JSON.parse(text); } catch(e) { data = null; }
+            if (!data || !data.success || !data.data) {
+                const msg = data && data.data && data.data.message ? data.data.message : 'No se pudo generar el preview.';
+                const selectedMode = modeOverride || (previewMode ? previewMode.value : 'fast');
+                if (selectedMode === 'full') {
+                    setPreviewStatus('Fallo en modo completo. Reintentando en preview rapido...', false);
+                    return runPreviewClassic(titleVal, 'fast');
+                }
+                setPreviewStatus(msg, true);
+                throw new Error(msg);
+            }
+            setPhase('texto', false);
+            enqueueClassicSimulation(data.data.preview_html || '');
+            renderPreviewResult(data.data, { skipImmediateHtml: true });
+            setPreviewStatus('Preview generado correctamente.', false);
+            setPhase('ready', false);
+        });
+    }
+
+    function runPreviewStream(titleVal){
+        if (typeof EventSource === 'undefined') {
+            return runPreviewClassic(titleVal);
+        }
+        const params = new URLSearchParams();
+        params.append('action', 'cbia_preview_article_stream');
+        params.append('_ajax_nonce', <?php echo wp_json_encode($ajax_nonce); ?>);
+        params.append('title', titleVal);
+        params.append('preview_mode', previewMode ? previewMode.value : 'fast');
+        params.append('post_language', postLanguage ? postLanguage.value : '');
+        params.append('images_limit', imagesLimit ? imagesLimit.value : '3');
+        const modeInput = promptModeChecked();
+        params.append('blog_prompt_mode', modeInput ? modeInput.value : 'recommended');
+        // Evita URLs enormes en SSE (EventSource usa GET); el contenido largo
+        // del prompt se toma de ajustes guardados en backend.
+
+        return new Promise((resolve, reject) => {
+            let completed = false;
+            let doneReceived = false;
+            let fatalReceived = false;
+            let lastEvent = '';
+            const streamUrl = ajaxurl + '?' + params.toString();
+            if (console && console.info) {
+                console.info('[CBIA_PREVIEW_TMP] stream start');
+            }
+            const source = new EventSource(streamUrl);
+
+            function readEventData(evt){
+                if (!evt || !evt.data) return {};
+                try { return JSON.parse(evt.data); } catch(e) { return {}; }
+            }
+            function logStreamClose(reason){
+                if (console && console.info) {
+                    console.info('[CBIA_PREVIEW_TMP] stream close reason=' + reason + ' last=' + (lastEvent || 'none'));
+                }
+            }
+            function handleDone(payload, eventName){
+                if (doneReceived || fatalReceived) return;
+                const data = payload || {};
+                completed = true;
+                doneReceived = true;
+                lastEvent = eventName || lastEvent;
+                source.close();
+                logStreamClose('done');
+                const result = data.result ? data.result : data;
+                if (!result) {
+                    reject(new Error('Respuesta incompleta de streaming.'));
+                    return;
+                }
+                renderPreviewResult(result);
+                setPreviewStatus('Preview generado correctamente.', false);
+                resolve();
+            }
+            function handleError(payload, eventName){
+                if (fatalReceived || doneReceived) return;
+                const data = payload || {};
+                completed = true;
+                fatalReceived = true;
+                lastEvent = eventName || lastEvent;
+                source.close();
+                logStreamClose('error');
+                setPhase('ready', true);
+                reject(new Error(data.message || 'No se pudo generar el preview.'));
+            }
+
+            source.addEventListener('cbia_status', function(evt){
+                lastEvent = 'cbia_status';
+                const data = readEventData(evt);
+                const msg = data.message || 'Procesando preview...';
+                setPreviewStatus(msg, false);
+                const low = msg.toLowerCase();
+                if (low.indexOf('contenido') !== -1 || low.indexOf('texto') !== -1) setPhase('texto', false);
+                if (low.indexOf('imagen') !== -1) setPhase('img', false);
+                if (low.indexOf('metadato') !== -1 || low.indexOf('listo') !== -1) setPhase('ready', false);
+            });
+            source.addEventListener('preview_start', function(evt){
+                lastEvent = 'preview_start';
+                const data = readEventData(evt);
+                setPreviewStatus('Iniciando preview de: ' + (data.title || ''), false);
+                setWordCount(0);
+            });
+            source.addEventListener('text_progress', function(evt){
+                lastEvent = 'text_progress';
+                const data = readEventData(evt);
+                progressiveMode = 'stream';
+                setPreviewModeBadge('stream');
+                enqueueProgressiveHtml(data.html || '', data.word_count || 0);
+            });
+            source.addEventListener('word_count', function(evt){
+                lastEvent = 'word_count';
+                const data = readEventData(evt);
+                setWordCount(data.count || 0);
+            });
+            source.addEventListener('featured_image_status', function(evt){
+                lastEvent = 'featured_image_status';
+                const data = readEventData(evt);
+                setFeaturedState(data.status || 'pending', data.message || '', data.url || '');
+            });
+            source.addEventListener('seo_payload', function(evt){
+                lastEvent = 'seo_payload';
+                const data = readEventData(evt);
+                renderSeoMeta(
+                    data.excerpt || '',
+                    data.tags || [],
+                    data.focus_keyphrase || '',
+                    data.meta_description || ''
+                );
+            });
+            source.addEventListener('cbia_content', function(evt){
+                lastEvent = 'cbia_content';
+                const data = readEventData(evt);
+                progressiveMode = 'stream';
+                setPreviewModeBadge('stream');
+                enqueueProgressiveHtml(data.html || '', data.word_count || 0);
+            });
+            source.addEventListener('preview_done', function(evt){
+                lastEvent = 'preview_done';
+                const data = readEventData(evt);
+                handleDone(data, 'preview_done');
+            });
+            source.addEventListener('preview_error', function(evt){
+                lastEvent = 'preview_error';
+                const data = readEventData(evt);
+                handleError(data, 'preview_error');
+            });
+            source.addEventListener('cbia_done', function(evt){
+                if (doneReceived) return;
+                lastEvent = 'cbia_done';
+                const data = readEventData(evt);
+                handleDone(data, 'cbia_done');
+            });
+            source.addEventListener('cbia_error', function(evt){
+                if (fatalReceived) return;
+                lastEvent = 'cbia_error';
+                const data = readEventData(evt);
+                handleError(data, 'cbia_error');
+            });
+            source.onerror = function(){
+                if (completed || doneReceived || fatalReceived) {
+                    source.close();
+                    return;
+                }
+                lastEvent = lastEvent || 'stream_error';
+                source.close();
+                logStreamClose('onerror');
+                reject(new Error('Fallo en streaming.'));
+            };
+        });
+    }
+
+    if (previewBtn) {
+        previewBtn.addEventListener('click', function(){
+            const titleVal = previewTitle ? (previewTitle.value || '').trim() : '';
+            if (!titleVal) {
+                setPreviewStatus('Selecciona o escribe primero un titulo manual.', true);
+                return;
+            }
+
+            setPreviewStatus('Generando preview...', false);
+            if (previewRuntime) previewRuntime.style.display = '';
+            setPhase('texto', false);
+            ensurePreviewVisible();
+            previewBtn.disabled = true;
+            previewToken = '';
+            if (previewTokenField) previewTokenField.value = '';
+            if (createDraftBtn) createDraftBtn.disabled = true;
+            if (createPublishBtn) createPublishBtn.disabled = true;
+            if (createScheduleBtn) createScheduleBtn.disabled = true;
+            renderSeoMeta('', [], '', '');
+            setWordCount(0);
+            setPreviewModeBadge('stream');
+            setFeaturedState('placeholder', 'Pendiente de fase de imagen...', '');
+            if (previewHtml) previewHtml.innerHTML = '';
+            previewOriginalHtml = '';
+            clearProgressiveQueue();
+            setPreviewEditMode(false);
+            if (previewEditPanel) previewEditPanel.style.display = 'none';
+            runPreviewStream(titleVal)
+            .catch((streamErr) => {
+                if (console && console.info) {
+                    console.info('[CBIA_PREVIEW_TMP] fallback entry reason=' + (streamErr && streamErr.message ? streamErr.message : 'stream_error'));
+                }
+                setPreviewStatus('Streaming inestable, reintentando en modo clasico...', false);
+                return runPreviewClassic(titleVal);
+            })
+            .catch((classicErr) => {
+                const msg = (classicErr && classicErr.message) ? classicErr.message : 'Error al generar preview.';
+                setPreviewStatus(msg, true);
+                setPhase('ready', true);
+            })
+            .finally(() => { previewBtn.disabled = false; });
+        });
+    }
+    function setCreateButtonsDisabled(disabled){
+        if (createDraftBtn) createDraftBtn.disabled = disabled;
+        if (createPublishBtn) createPublishBtn.disabled = disabled;
+        if (createScheduleBtn) createScheduleBtn.disabled = disabled;
+    }
+    function createPostFromPreview(status){
+        if (!previewToken) {
+            setPreviewStatus('Primero genera una preview valida.', true);
+            return;
+        }
+        if (status === 'future' && (!previewPostDate || !previewPostDate.value)) {
+            setPreviewStatus('Indica fecha/hora para programar.', true);
+            return;
+        }
+        setCreateButtonsDisabled(true);
+        setPreviewStatus('Creando post desde preview...', false);
+        setPhase('ready', false);
+        const fd = new FormData();
+        fd.append('action', 'cbia_create_post_from_preview');
+        fd.append('_ajax_nonce', <?php echo wp_json_encode($ajax_nonce); ?>);
+        fd.append('preview_token', previewToken);
+        fd.append('edited_title', previewEditTitle ? previewEditTitle.value : '');
+        fd.append('edited_html', previewHtml ? previewHtml.innerHTML : '');
+        fd.append('post_status', status || 'publish');
+        fd.append('post_date_local', previewPostDate ? previewPostDate.value : '');
+
+        fetch(ajaxurl, { method:'POST', credentials:'same-origin', body: fd })
+        .then(r => r.text())
+        .then(text => {
+            let data = null;
+            try { data = JSON.parse(text); } catch(e) { data = null; }
+            if (!data || !data.success || !data.data) {
+                const msg = data && data.data && data.data.message ? data.data.message : 'No se pudo crear el post desde preview.';
+                setPreviewStatus(msg, true);
+                setCreateButtonsDisabled(false);
+                return;
+            }
+            const editUrl = data.data.edit_url || '';
+            if (editUrl) {
+                setPreviewStatus('Post creado correctamente. Abriendo edicion...', false);
+                window.location.href = editUrl;
+                return;
+            }
+            setPreviewStatus(data.data.message || 'Post creado correctamente.', false);
+            setCreateButtonsDisabled(false);
+        })
+        .catch(() => {
+            setPreviewStatus('Error de red al crear post desde preview.', true);
+            setCreateButtonsDisabled(false);
+        });
+    }
+    if (createDraftBtn) {
+        createDraftBtn.addEventListener('click', function(){
+            createPostFromPreview('draft');
+        });
+    }
+    if (createPublishBtn) {
+        createPublishBtn.addEventListener('click', function(){
+            createPostFromPreview('publish');
+        });
+    }
+    if (createScheduleBtn) {
+        createScheduleBtn.addEventListener('click', function(){
+            createPostFromPreview('future');
+        });
+    }
+
+    // CAMBIO: panel de prompt recomendado/legacy (colapsado por defecto).
+    const modeInputs = document.querySelectorAll('input[name="blog_prompt_mode"]');
+    const advancedToggle = document.getElementById('cbia_toggle_advanced_prompt');
+    const advancedWrap = document.getElementById('cbia_advanced_prompt_wrap');
+    const editToggle = document.getElementById('cbia_toggle_prompt_edit');
+    const editWrap = document.getElementById('cbia_prompt_edit_wrap');
+    const editRecommended = document.getElementById('cbia_prompt_edit_recommended');
+    const editLegacy = document.getElementById('cbia_prompt_edit_legacy');
+    const restoreBtn = document.getElementById('cbia_btn_restore_prompt');
+    const editableTa = document.getElementById('cbia_blog_prompt_editable');
+    const editableDefault = document.getElementById('cbia_blog_prompt_default');
+
+    function getPromptMode(){
+        const selected = document.querySelector('input[name="blog_prompt_mode"]:checked');
+        return selected ? selected.value : 'recommended';
+    }
+
+    function refreshPromptEditor(){
+        const opened = !!(editToggle && editToggle.checked);
+        const mode = getPromptMode();
+        const advancedOn = !!(advancedToggle && advancedToggle.checked);
+        if (advancedWrap) advancedWrap.style.display = advancedOn ? '' : 'none';
+        if (editWrap) editWrap.style.display = opened ? '' : 'none';
+        if (editRecommended) editRecommended.style.display = opened && mode === 'recommended' ? '' : 'none';
+        if (editLegacy) editLegacy.style.display = opened && mode === 'legacy' ? '' : 'none';
+    }
+
+    if (editToggle) editToggle.addEventListener('change', refreshPromptEditor);
+    if (advancedToggle) {
+        advancedToggle.addEventListener('change', function(){
+            const legacyRadio = document.querySelector('input[name="blog_prompt_mode"][value="legacy"]');
+            const recRadio = document.querySelector('input[name="blog_prompt_mode"][value="recommended"]');
+            if (!advancedToggle.checked && recRadio) recRadio.checked = true;
+            if (advancedToggle.checked && legacyRadio) legacyRadio.checked = true;
+            refreshPromptEditor();
+        });
+    }
+    modeInputs.forEach(function(r){ r.addEventListener('change', refreshPromptEditor); });
+
+    if (restoreBtn && editableTa && editableDefault) {
+        restoreBtn.addEventListener('click', function(){
+            editableTa.value = editableDefault.value || '';
+        });
+    }
+
+    refreshPromptEditor();
 })();
 </script>
 <?php // phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound ?>

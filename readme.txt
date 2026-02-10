@@ -2,7 +2,7 @@
 Contributors: webgoh
 Requires at least: 6.9
 Tested up to: 6.9.0
-Stable tag: 3.0.1
+Stable tag: 3.0.3
 Requires PHP: 8.2
 Network: true
 License: GPLv2 or later
@@ -44,6 +44,8 @@ Los wrappers legacy (`includes/legacy/cbia-*.php`) han sido eliminados en la ver
 Si tu instalación dependía de esos archivos, migra a las rutas nuevas en `includes/` (core/admin/engine/domain).
 
 == Changelog ==
+* 3.0.3 - Preview SSE y fallback reforzados, nuevo card de preview y token persistente para crear post.
+* 3.0.2 - Preview reforzado (UI, featured desde preview, SEO desplegable, iconos Dashicons), mejoras de prompts de imagen y CSS de banner en admin/editor.
 * 3.0.1 - Ajustes en UI/engine (prompts de imagen y estilos internos).
 * 3.0 - Eliminado legacy (wrappers), core limpio y estructura estable. Release mayor.
 * 2.3 - Estructura profesional por capas (core/admin/services/repos), UIs separadas en views, mejoras de legibilidad y hooks centralizados.

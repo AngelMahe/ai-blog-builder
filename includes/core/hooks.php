@@ -51,6 +51,15 @@ if (!function_exists('cbia_register_core_hooks')) {
         if (!has_action('wp_ajax_cbia_sync_models', 'cbia_ajax_sync_models')) {
             add_action('wp_ajax_cbia_sync_models', 'cbia_ajax_sync_models');
         }
+        if (!has_action('wp_ajax_cbia_preview_article', 'cbia_ajax_preview_article')) {
+            add_action('wp_ajax_cbia_preview_article', 'cbia_ajax_preview_article');
+        }
+        if (!has_action('wp_ajax_cbia_preview_article_stream', 'cbia_ajax_preview_article_stream')) {
+            add_action('wp_ajax_cbia_preview_article_stream', 'cbia_ajax_preview_article_stream');
+        }
+        if (!has_action('wp_ajax_cbia_create_post_from_preview', 'cbia_ajax_create_post_from_preview')) {
+            add_action('wp_ajax_cbia_create_post_from_preview', 'cbia_ajax_create_post_from_preview');
+        }
         if (!has_action('admin_post_cbia_usage_export', 'cbia_admin_post_usage_export')) {
             add_action('admin_post_cbia_usage_export', 'cbia_admin_post_usage_export');
         }
@@ -58,6 +67,10 @@ if (!function_exists('cbia_register_core_hooks')) {
         // Frontend styles for banner images
         if (!has_action('wp_head', 'cbia_output_banner_css')) {
             add_action('wp_head', 'cbia_output_banner_css', 20);
+        }
+        // Admin/editor styles for banner images (preview + editor)
+        if (!has_action('admin_head', 'cbia_output_banner_css_admin')) {
+            add_action('admin_head', 'cbia_output_banner_css_admin', 20);
         }
     }
 }
@@ -150,9 +163,9 @@ if (!function_exists('cbia_admin_notice_yoast')) {
                     self_admin_url('plugins.php?action=activate&plugin=' . rawurlencode($yoast_plugin)),
                     'activate-plugin_' . $yoast_plugin
                 );
-                $msg = 'Yoast SEO estÃƒÂ¡ instalado pero inactivo. <a href="' . esc_url($activate_url) . '">Activar ahora</a>.';
+                $msg = 'Yoast SEO estÃ¡ instalado pero inactivo. <a href="' . esc_url($activate_url) . '">Activar ahora</a>.';
             } else {
-                $msg = 'Yoast SEO estÃƒÂ¡ instalado pero inactivo.';
+                $msg = 'Yoast SEO estÃ¡ instalado pero inactivo.';
             }
             echo '<div class="notice notice-warning is-dismissible"><p>' . wp_kses($msg, ['a' => ['href' => []]]) . '</p></div>';
             return;
@@ -163,9 +176,9 @@ if (!function_exists('cbia_admin_notice_yoast')) {
                 self_admin_url('update.php?action=install-plugin&plugin=wordpress-seo'),
                 'install-plugin_wordpress-seo'
             );
-            $msg = 'Yoast SEO no estÃƒÂ¡ instalado. <a href="' . esc_url($install_url) . '">Instalar Yoast SEO</a>.';
+            $msg = 'Yoast SEO no estÃ¡ instalado. <a href="' . esc_url($install_url) . '">Instalar Yoast SEO</a>.';
         } else {
-            $msg = 'Yoast SEO no estÃƒÂ¡ instalado.';
+            $msg = 'Yoast SEO no estÃ¡ instalado.';
         }
 
         echo '<div class="notice notice-warning is-dismissible"><p>' . wp_kses($msg, ['a' => ['href' => []]]) . '</p></div>';
@@ -177,6 +190,7 @@ if (!function_exists('cbia_admin_enqueue_inline')) {
         if ($hook !== 'toplevel_page_cbia' && $hook !== 'edit.php') return;
 
         wp_enqueue_script('jquery');
+        wp_enqueue_style('dashicons');
         $css_path = CBIA_PRO_PLUGIN_DIR . 'assets/css/admin.css';
         $js_path  = CBIA_PRO_PLUGIN_DIR . 'assets/js/admin.js';
         $css_ver  = file_exists($css_path) ? filemtime($css_path) : CBIA_VERSION;
@@ -262,6 +276,160 @@ if (!function_exists('cbia_output_banner_css')) {
     }
 }
 
+if (!function_exists('cbia_output_banner_css_admin')) {
+    function cbia_output_banner_css_admin() {
+        if (!function_exists('cbia_get_settings')) return;
+        $settings = cbia_get_settings();
+        if (empty($settings['content_images_banner_enabled'])) return;
+
+        $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+        if ($screen) {
+            $is_plugin_screen = (strpos((string)$screen->id, 'ai-blog-builder') !== false) || (strpos((string)$screen->id, 'cbia') !== false);
+            $is_post_editor = in_array((string)$screen->base, array('post', 'post-new'), true);
+            if (!$is_plugin_screen && !$is_post_editor) {
+                return;
+            }
+        }
+
+        $css = trim((string)($settings['content_images_banner_css'] ?? ''));
+        if ($css === '') return;
+        echo "<style id='cbia-banner-css-admin'>\n" . $css . "\n</style>";
+    }
+}
+
+if (!function_exists('cbia_ajax_preview_article')) {
+    function cbia_ajax_preview_article() {
+        check_ajax_referer('cbia_ajax_nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'No autorizado'), 403);
+        }
+
+        $payload = array(
+            'title' => isset($_POST['title']) ? sanitize_text_field(wp_unslash($_POST['title'])) : '',
+            'preview_mode' => isset($_POST['preview_mode']) ? sanitize_key((string)wp_unslash($_POST['preview_mode'])) : 'fast',
+            'images_limit' => isset($_POST['images_limit']) ? absint(wp_unslash($_POST['images_limit'])) : 3,
+            'post_language' => isset($_POST['post_language']) ? sanitize_text_field(wp_unslash($_POST['post_language'])) : '',
+            'blog_prompt_mode' => isset($_POST['blog_prompt_mode']) ? sanitize_key((string)wp_unslash($_POST['blog_prompt_mode'])) : '',
+            'blog_prompt_editable' => isset($_POST['blog_prompt_editable']) ? sanitize_textarea_field(wp_unslash($_POST['blog_prompt_editable'])) : '',
+            'legacy_full_prompt' => isset($_POST['legacy_full_prompt']) ? sanitize_textarea_field(wp_unslash($_POST['legacy_full_prompt'])) : '',
+        );
+
+        $service = null;
+        if (function_exists('cbia_container')) {
+            $container = cbia_container();
+            if ($container) $service = $container->get('article_preview_service');
+        }
+        if (!$service && class_exists('CBIA_Article_Preview_Service')) {
+            $service = new CBIA_Article_Preview_Service();
+        }
+        if (!$service || !method_exists($service, 'generate')) {
+            wp_send_json_error(array('message' => 'Servicio de preview no disponible'), 500);
+        }
+
+        $result = $service->generate($payload);
+        if (is_wp_error($result)) {
+            wp_send_json_error(array('message' => $result->get_error_message()), 400);
+        }
+
+        wp_send_json_success($result);
+    }
+}
+
+if (!function_exists('cbia_sse_emit')) {
+    function cbia_sse_emit($event, array $payload) {
+        echo 'event: ' . preg_replace('/[^a-zA-Z0-9_\-]/', '', (string)$event) . "\n";
+        echo 'data: ' . wp_json_encode($payload) . "\n\n";
+        if (function_exists('ob_get_level')) {
+            while (ob_get_level() > 0) {
+                @ob_end_flush();
+            }
+        }
+        @flush();
+    }
+}
+
+if (!function_exists('cbia_ajax_preview_article_stream')) {
+    function cbia_ajax_preview_article_stream() {
+        if (function_exists('ignore_user_abort')) {
+            @ignore_user_abort(true);
+        }
+        @ini_set('zlib.output_compression', '0');
+        @ini_set('output_buffering', 'off');
+        @ini_set('implicit_flush', '1');
+        @ini_set('display_errors', '0');
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            @ini_set('log_errors', '1');
+        }
+        nocache_headers();
+        header('Content-Type: text/event-stream; charset=utf-8');
+        header('Cache-Control: no-cache, no-transform');
+        header('X-Accel-Buffering: no');
+        if (function_exists('error_log')) {
+            error_log('[CBIA_PREVIEW_TMP] stream start user=' . (int)get_current_user_id());
+        }
+
+        $nonce_ok = check_ajax_referer('cbia_ajax_nonce', '_ajax_nonce', false);
+        if (!$nonce_ok) {
+            cbia_sse_emit('preview_error', array('message' => 'Nonce invalido.'));
+            cbia_sse_emit('cbia_error', array('message' => 'Nonce invalido.'));
+            exit;
+        }
+        if (!current_user_can('manage_options')) {
+            cbia_sse_emit('preview_error', array('message' => 'No autorizado.'));
+            cbia_sse_emit('cbia_error', array('message' => 'No autorizado.'));
+            exit;
+        }
+
+        $payload = array(
+            'title' => isset($_GET['title']) ? sanitize_text_field(wp_unslash($_GET['title'])) : '',
+            'preview_mode' => isset($_GET['preview_mode']) ? sanitize_key((string)wp_unslash($_GET['preview_mode'])) : 'fast',
+            'images_limit' => isset($_GET['images_limit']) ? absint(wp_unslash($_GET['images_limit'])) : 3,
+            'post_language' => isset($_GET['post_language']) ? sanitize_text_field(wp_unslash($_GET['post_language'])) : '',
+            'blog_prompt_mode' => isset($_GET['blog_prompt_mode']) ? sanitize_key((string)wp_unslash($_GET['blog_prompt_mode'])) : '',
+            // El SSE usa GET: no aceptar payload largo aqui para evitar URL enorme.
+            'blog_prompt_editable' => '',
+            'legacy_full_prompt' => '',
+        );
+
+        $service = null;
+        if (function_exists('cbia_container')) {
+            $container = cbia_container();
+            if ($container) $service = $container->get('article_preview_service');
+        }
+        if (!$service && class_exists('CBIA_Article_Preview_Service')) {
+            $service = new CBIA_Article_Preview_Service();
+        }
+        if (!$service) {
+            cbia_sse_emit('preview_error', array('message' => 'Servicio de preview no disponible.'));
+            cbia_sse_emit('cbia_error', array('message' => 'Servicio de preview no disponible.'));
+            exit;
+        }
+
+        cbia_sse_emit('cbia_status', array('message' => 'Iniciando preview...'));
+        cbia_sse_emit('cbia_ping', array('ts' => time()));
+        if (method_exists($service, 'generate_stream')) {
+            $result = $service->generate_stream($payload, function($event, $data) {
+                cbia_sse_emit($event, is_array($data) ? $data : array());
+            });
+        } else {
+            $result = $service->generate($payload);
+        }
+
+        if (is_wp_error($result)) {
+            cbia_sse_emit('preview_error', array('message' => $result->get_error_message()));
+            cbia_sse_emit('cbia_error', array('message' => $result->get_error_message()));
+            exit;
+        }
+        cbia_sse_emit('preview_done', array('ok' => 1, 'result' => $result));
+        cbia_sse_emit('cbia_done', array('result' => $result));
+        if (function_exists('error_log')) {
+            $token = isset($result['preview_token']) ? (string)$result['preview_token'] : '';
+            error_log('[CBIA_PREVIEW_TMP] stream close token=' . $token);
+        }
+        exit;
+    }
+}
+
 if (!function_exists('cbia_ajax_get_log')) {
     function cbia_ajax_get_log() {
         check_ajax_referer('cbia_ajax_nonce');
@@ -281,6 +449,45 @@ if (!function_exists('cbia_ajax_get_log')) {
             wp_send_json_success($payload);
         }
         wp_send_json_success(['log' => '', 'counter' => 0]);
+    }
+}
+
+if (!function_exists('cbia_ajax_create_post_from_preview')) {
+    function cbia_ajax_create_post_from_preview() {
+        check_ajax_referer('cbia_ajax_nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'No autorizado'), 403);
+        }
+
+        $token = isset($_POST['preview_token']) ? sanitize_text_field(wp_unslash($_POST['preview_token'])) : '';
+        if ($token === '') {
+            wp_send_json_error(array('message' => 'Falta token de preview.'), 400);
+        }
+        $overrides = array(
+            'title' => isset($_POST['edited_title']) ? sanitize_text_field(wp_unslash($_POST['edited_title'])) : '',
+            'html' => isset($_POST['edited_html']) ? wp_kses_post(wp_unslash($_POST['edited_html'])) : '',
+            'post_status' => isset($_POST['post_status']) ? sanitize_key((string)wp_unslash($_POST['post_status'])) : 'publish',
+            'post_date_local' => isset($_POST['post_date_local']) ? sanitize_text_field(wp_unslash($_POST['post_date_local'])) : '',
+        );
+
+        $service = null;
+        if (function_exists('cbia_container')) {
+            $container = cbia_container();
+            if ($container) $service = $container->get('article_preview_service');
+        }
+        if (!$service && class_exists('CBIA_Article_Preview_Service')) {
+            $service = new CBIA_Article_Preview_Service();
+        }
+        if (!$service || !method_exists($service, 'create_post_from_token')) {
+            wp_send_json_error(array('message' => 'Servicio de preview no disponible'), 500);
+        }
+
+        $result = $service->create_post_from_token($token, $overrides);
+        if (is_wp_error($result)) {
+            wp_send_json_error(array('message' => $result->get_error_message()), 400);
+        }
+
+        wp_send_json_success($result);
     }
 }
 
@@ -306,7 +513,7 @@ if (!function_exists('cbia_ajax_set_stop')) {
             cbia_set_stop_flag($stop === 1);
         }
         if (function_exists('cbia_log')) {
-            cbia_log($stop === 1 ? 'Se activÃƒÂ³ STOP (detener generaciÃƒÂ³n).' : 'Se desactivÃƒÂ³ STOP (reanudar).', 'INFO');
+            cbia_log($stop === 1 ? 'Se activÃ³ STOP (detener generaciÃ³n).' : 'Se desactivÃ³ STOP (reanudar).', 'INFO');
         }
         wp_send_json_success(['stop' => $stop === 1 ? 1 : 0]);
     }
@@ -372,7 +579,7 @@ if (!function_exists('cbia_ajax_start_generation')) {
         // Ejecuta 1 tanda inmediata para que haya log visible.
         $max_per_run = 1;
         if (function_exists('cbia_log_message')) {
-            cbia_log_message('[INFO] START: Ejecutando primera tanda inmediata (para evitar Ã¢â‚¬Å“no hace nadaÃ¢â‚¬Â).');
+            cbia_log_message('[INFO] START: Ejecutando primera tanda inmediata (para evitar â€œno hace nadaâ€).');
         }
         $result = $blog_service
             ? $blog_service->run_generate_blogs($max_per_run)
@@ -447,10 +654,20 @@ if (!function_exists('cbia_ajax_get_img_prompt')) {
         $type = isset($_POST['type']) ? sanitize_key((string)$_POST['type']) : '';
         $idx = isset($_POST['idx']) ? (int)$_POST['idx'] : 0;
 
-        if ($post_id <= 0 || ($type !== 'featured' && $type !== 'internal')) {
-            wp_send_json_error(['message' => 'Parámetros inválidos'], 400);
+        if ($type !== 'featured' && $type !== 'internal') {
+            wp_send_json_error(['message' => 'Parametros invalidos'], 400);
         }
 
+        if ($post_id <= 0) {
+            if (!function_exists('cbia_get_image_prompt_template')) {
+                wp_send_json_error(['message' => 'Funcion no disponible'], 500);
+            }
+            $tpl = cbia_get_image_prompt_template($type, $idx);
+            wp_send_json_success([
+                'prompt' => (string)$tpl,
+                'has_override' => 0,
+            ]);
+        }
         $title = get_the_title($post_id);
         $img_descs = function_exists('cbia_get_post_image_descs')
             ? cbia_get_post_image_descs($post_id)
@@ -492,8 +709,8 @@ if (!function_exists('cbia_ajax_save_img_prompt_override')) {
         $idx = isset($_POST['idx']) ? (int)$_POST['idx'] : 0;
         $prompt = isset($_POST['prompt']) ? wp_unslash((string)$_POST['prompt']) : '';
 
-        if ($post_id <= 0 || ($type !== 'featured' && $type !== 'internal')) {
-            wp_send_json_error(['message' => 'Parámetros inválidos'], 400);
+        if ($type !== 'featured' && $type !== 'internal') {
+            wp_send_json_error(['message' => 'Parametros invalidos'], 400);
         }
 
         $prompt = trim($prompt);
@@ -501,8 +718,26 @@ if (!function_exists('cbia_ajax_save_img_prompt_override')) {
             $prompt = sanitize_textarea_field($prompt);
         }
 
+        if ($post_id <= 0) {
+            if (!function_exists('cbia_update_settings_merge')) {
+                wp_send_json_error(['message' => 'Funcion no disponible'], 500);
+            }
+            $partial = [];
+            if ($type === 'featured') {
+                $partial['prompt_img_featured'] = $prompt;
+            } else {
+                if ($idx >= 1) {
+                    $partial['prompt_img_internal_' . $idx] = $prompt;
+                } else {
+                    $partial['prompt_img_internal'] = $prompt;
+                }
+            }
+            cbia_update_settings_merge($partial);
+            wp_send_json_success(['ok' => 1]);
+        }
+
         if (!function_exists('cbia_set_img_prompt_override')) {
-            wp_send_json_error(['message' => 'Función no disponible'], 500);
+            wp_send_json_error(['message' => 'Funcion no disponible'], 500);
         }
 
         cbia_set_img_prompt_override($post_id, $type, $idx, $prompt);
@@ -520,7 +755,7 @@ if (!function_exists('cbia_ajax_regen_image')) {
         $idx = isset($_POST['idx']) ? (int)$_POST['idx'] : 0;
 
         if ($post_id <= 0 || ($type !== 'featured' && $type !== 'internal')) {
-            wp_send_json_error(['message' => 'Parámetros inválidos'], 400);
+            wp_send_json_error(['message' => 'Parametros invalidos'], 400);
         }
 
         $post = get_post($post_id);
@@ -558,7 +793,7 @@ if (!function_exists('cbia_ajax_regen_image')) {
         $alt = function_exists('cbia_sanitize_alt_from_desc') ? cbia_sanitize_alt_from_desc($desc) : '';
         if ($alt === '') $alt = function_exists('cbia_sanitize_alt_from_desc') ? cbia_sanitize_alt_from_desc($title) : '';
 
-        list($ok, $attach_id, $model, $err) = cbia_generate_image_openai_with_prompt($prompt, $section, $title, $alt);
+        list($ok, $attach_id, $model, $err) = cbia_generate_image_openai_with_prompt($prompt, $section, $title, $alt, $idx);
         if (!$ok || !$attach_id) {
             cbia_log(__("Regenerar imagen: fallo post {$post_id} ({$type} {$idx}): ","ai-blog-builder-pro") . ($err ?: ''), 'ERROR');
             wp_send_json_error(['message' => $err ?: 'No se pudo generar la imagen'], 500);
@@ -594,7 +829,7 @@ if (!function_exists('cbia_ajax_regen_image')) {
         // Interna: reemplazar en contenido
         $html = (string)$post->post_content;
         $url = wp_get_attachment_url((int)$attach_id);
-        $img_tag = cbia_build_content_img_tag_with_meta($url, $alt, $section, (int)$attach_id);
+        $img_tag = cbia_build_content_img_tag_with_meta($url, $alt, $section, (int)$attach_id, $idx);
 
         $replaced = false;
         if ($old_attach > 0) {

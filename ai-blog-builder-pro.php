@@ -2,7 +2,7 @@
 /**
  * Plugin Name: AI Blog Builder Pro
  * Description: Version Pro de AI Blog Builder (requiere la version gratuita activa).
- * Version: 3.0.1
+ * Version: 3.0.3
  *
  * Author: CBIA Studio
  * Requires at least: 6.9
@@ -14,7 +14,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-if (!defined('CBIA_PRO_VERSION')) define('CBIA_PRO_VERSION', '3.0.1');
+if (!defined('CBIA_PRO_VERSION')) define('CBIA_PRO_VERSION', '3.0.3');
 if (!defined('CBIA_PRO_PLUGIN_FILE')) define('CBIA_PRO_PLUGIN_FILE', __FILE__);
 if (!defined('CBIA_PRO_PLUGIN_DIR')) define('CBIA_PRO_PLUGIN_DIR', plugin_dir_path(__FILE__));
 if (!defined('CBIA_PRO_PLUGIN_URL')) define('CBIA_PRO_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -174,10 +174,26 @@ if (!function_exists('cbia_get_default_settings')) {
 			'openai_consent'        => 0,
 			'openai_model'          => 'gpt-4.1-mini',
 			'openai_temperature'    => 0.7,
+			// CAMBIO: claves por proveedor
+			'google_api_key'        => '',
+			'deepseek_api_key'      => '',
+			// CAMBIO: proveedor/modelo texto/imagen
+			'text_provider'         => 'openai',
+			'text_model'            => '',
+			'image_provider'        => 'openai',
+			'image_model'           => 'gpt-image-1-mini',
+			// CAMBIO: Google Imagen (Vertex AI)
+			'google_project_id'     => '',
+			'google_location'       => '',
+			'google_service_account_json' => '',
 
 			// Longitud / imágenes
 			'post_length_variant'   => 'medium',
 			'images_limit'          => 3,
+			// CAMBIO: prompt recomendado/legado (compatibilidad)
+			'blog_prompt_mode'      => 'recommended',
+			'blog_prompt_editable'  => '',
+			'legacy_full_prompt'    => '',
 			'prompt_single_all'     => "Escribe un artículo de blog en HTML (sin <h1>) sobre: {title}\nIncluye marcadores de imagen del tipo [IMAGEN: descripción].",
 			'prompt_img_intro'      => '',
 			'prompt_img_body'       => '',
@@ -198,14 +214,14 @@ if (!function_exists('cbia_get_default_settings')) {
 			// Estilos imagenes contenido (no destacada)
 			'content_images_banner_enabled' => 1,
 			'content_images_banner_css' =>
-				".elementor-widget-theme-post-content img.cbia-banner{\n" .
+				"img.cbia-banner {\n" .
 				"  width: 100%;\n" .
-				"  height: 350px !important;\n" .
-				"  max-height: 350px !important;\n" .
-				"  object-fit: cover;\n" .
-				"  object-position: center;\n" .
-				"  border-radius: 20px;\n" .
-				"  display: block;\n" .
+				"  height: 250px !important;\n" .
+				"  object-fit: cover !important;\n" .
+				"  object-position: 50% 60% !important;\n" .
+				"  display: block !important;\n" .
+				"  margin: 15px 0 !important;\n" .
+				"  transition: transform 0.3s ease !important;\n" .
 				"}",
 		];
 	}
@@ -349,6 +365,9 @@ if (!function_exists('cbia_render_admin_page')) {
 		echo '</div>';
 	}
 }
+
+
+
 
 
 
