@@ -20,3 +20,10 @@ jobs:
           svn_username: ${{ secrets.SVN_USERNAME }}
           svn_password: ${{ secrets.SVN_PASSWORD }}
           build_dir: ai-blog-builder
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
