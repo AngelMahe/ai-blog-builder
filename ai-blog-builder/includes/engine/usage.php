@@ -41,7 +41,7 @@ if (!function_exists('cbia_extract_text_from_responses_payload')) {
                         }
                         if (!is_array($seg)) continue;
 
-                        // Variantes típicas:
+                        // Variantes tÃ­picas:
                         // - {type:"output_text", text:"..."}
                         // - {type:"output_text", text:{value:"..."}}
                         // - {type:"message", content:[{type:"output_text", text:"..."}]}
@@ -91,7 +91,7 @@ if (!function_exists('cbia_extract_text_from_responses_payload')) {
             }
         }
 
-        // 4) Último recurso: búsqueda recursiva de strings con claves típicas
+        // 4) Ãšltimo recurso: bÃºsqueda recursiva de strings con claves tÃ­picas
         $acc = array();
         $max_depth = 6;
         $max_chars = 20000;
@@ -161,7 +161,7 @@ if (!function_exists('cbia_usage_from_responses_payload')) {
 }
 
 /* =========================================================
-   ================== USAGE: ACUMULACIÓN ====================
+   ================== USAGE: ACUMULACIÃ“N ====================
    ========================================================= */
 
 if (!function_exists('cbia_usage_empty')) {
@@ -216,7 +216,7 @@ if (!function_exists('cbia_usage_append_call')) {
 
         $list[] = $item;
 
-        // Mantener tamaño razonable
+        // Mantener tamaÃ±o razonable
         if (count($list) > 200) $list = array_slice($list, -200);
 
         update_post_meta($post_id, '_cbia_usage_calls', wp_json_encode($list));
@@ -239,7 +239,7 @@ if (!function_exists('cbia_usage_append_call')) {
 }
 
 /**
- * Guarda llamadas a imágenes (para coste por imagen y trazabilidad).
+ * Guarda llamadas a imÃ¡genes (para coste por imagen y trazabilidad).
  * - Meta: _cbia_image_calls (JSON)
  * - Agregados: _cbia_images_total / _cbia_images_ok / _cbia_images_fail
  */
@@ -282,3 +282,4 @@ if (!function_exists('cbia_image_append_call')) {
         return true;
     }
 }
+

@@ -46,12 +46,26 @@ if (!function_exists('cbia_generate_meta_description')) {
 		$t = trim(wp_strip_all_tags((string)$title));
 
 		if ($t !== '') {
-			$pattern = '/^' . preg_quote($t, '/') . '\s*[:\-–—]?\s*/iu';
+			$pattern = '/^' . preg_quote($t, '/') . '\s*[:\-]?\s*/iu';
 			$base = preg_replace($pattern, '', $base);
 		}
 
-		$desc = trim(mb_substr((string)$base, 0, 155));
-		if ($desc !== '' && !preg_match('/[.!?]$/u', $desc)) $desc .= '...';
-		return $desc;
+		$base = trim(preg_replace('/\s+/u', ' ', (string)$base));
+		$max_len = 155;
+		if (mb_strlen($base) <= $max_len) return $base;
+
+		$cut_len = $max_len - 3;
+		if ($cut_len < 1) $cut_len = 1;
+		$truncated = mb_substr($base, 0, $cut_len);
+
+		$last_space = mb_strrpos($truncated, ' ');
+		if ($last_space !== false && $last_space >= 40) {
+			$truncated = mb_substr($truncated, 0, $last_space);
+		}
+
+		$truncated = rtrim($truncated, " \t\n\r\0\x0B.,;:!?");
+		return $truncated . '...';
 	}
 }
+
+

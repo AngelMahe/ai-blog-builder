@@ -25,7 +25,8 @@ if (!function_exists('cbia_pick_post_author_id')) {
         ]);
         if (!empty($admins) && isset($admins[0])) return (int)$admins[0];
 
-        // 4) Último fallback
+        // 4) Ãšltimo fallback
         return 1;
     }
 }
+

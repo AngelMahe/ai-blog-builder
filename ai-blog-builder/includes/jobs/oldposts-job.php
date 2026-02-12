@@ -15,3 +15,4 @@ if (!class_exists('CBIA_Oldposts_Job')) {
         }
     }
 }
+
