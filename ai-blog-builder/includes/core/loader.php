@@ -1,6 +1,6 @@
 <?php
 /**
- * CBIA Loader (FREE 1.0.0)
+ * CBIA Loader (v2.3 scaffolding)
  *
  * Central point to register hooks and admin tabs.
  * Keep this light; real logic lives in services/admin classes.
@@ -28,3 +28,4 @@ if (!class_exists('CBIA_Loader')) {
         }
     }
 }
+

@@ -1,6 +1,6 @@
 <?php
 /**
- * Wiring for the FREE 1.0.0 structure.
+ * Wiring for the 2.3 structure (safe, no behavior change yet).
  */
 
 if (!defined('ABSPATH')) exit;
@@ -25,6 +25,9 @@ if (!function_exists('cbia_container')) {
         if (class_exists('CBIA_Blog_Service')) {
             $container->set('blog_service', new CBIA_Blog_Service());
         }
+        if (class_exists('CBIA_Article_Preview_Service')) {
+            $container->set('article_preview_service', new CBIA_Article_Preview_Service());
+        }
         if (class_exists('CBIA_OpenAI_Client')) {
             $container->set('openai_client', new CBIA_OpenAI_Client());
         }
@@ -32,9 +35,6 @@ if (!function_exists('cbia_container')) {
             $container->set('engine_service', new CBIA_Engine_Service($container->get('openai_client')));
         }
         // Integrations
-        if (class_exists('CBIA_Yoast_Client')) {
-            $container->set('yoast_client', new CBIA_Yoast_Client());
-        }
 
         // Admin
         if (class_exists('CBIA_Admin_Router')) {
@@ -48,18 +48,16 @@ if (!function_exists('cbia_container')) {
         }
 
         // Jobs / scheduler
-        if (class_exists('CBIA_Scheduler')) {
-            $container->set('scheduler', new CBIA_Scheduler());
-        }
 
         // Register tabs on router (if available)
         $router = $container->get('admin_router');
         if ($router) {
             $router->register_tab_object($container->get('config_admin'));
             $router->register_tab_object($container->get('blog_admin'));
-            // FREE: solo Config + Blog
+            // Normal version: only Config + Blog tabs.
         }
 
         return $container;
     }
 }
+

@@ -38,3 +38,4 @@ if (!class_exists('CBIA_Yoast_Service')) {
         }
     }
 }
+

@@ -49,15 +49,13 @@ if (!function_exists('cbia_pick_model')) {
     function cbia_pick_model() {
         $s = cbia_get_settings();
         $preferred = $s['openai_model'] ?? 'gpt-4.1-mini';
-        $blocked = $s['blocked_models'] ?? [];
-        if (!is_array($blocked)) $blocked = [];
 
         $chain = cbia_model_fallback_chain($preferred);
         foreach ($chain as $m) {
-            if (!empty($blocked[$m])) continue;
             return $m;
         }
-        // Si bloqueó todo, devolvemos preferido igualmente
+        // Si no hay candidatos, devolvemos preferido igualmente
         return $preferred ?: 'gpt-4.1-mini';
     }
 }
+

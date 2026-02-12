@@ -6,7 +6,7 @@
 if (!defined('ABSPATH')) exit;
 
 /* =========================================================
-   =========== RELLENAR IMÁGENES PENDIENTES (POST) ==========
+   =========== RELLENAR IMÃGENES PENDIENTES (POST) ==========
    ========================================================= */
 
 if (!function_exists('cbia_fill_pending_images_for_post')) {
@@ -28,43 +28,66 @@ if (!function_exists('cbia_fill_pending_images_for_post')) {
 			if (is_array($tmp)) $list = $tmp;
 		}
 
+		$img_descs = function_exists('cbia_get_post_image_descs')
+			? cbia_get_post_image_descs($post_id)
+			: array('featured' => array('desc' => '', 'section' => 'intro', 'attach_id' => 0), 'internal' => array());
+
 		$title = get_the_title($post_id);
 		$filled = 0;
 
 		// Destacada si no hay thumbnail y hay pendientes
 		if (!has_post_thumbnail($post_id) && !empty($pending)) {
-			$desc0 = cbia_sanitize_alt_from_desc($pending[0]['desc'] ?? $title);
-			list($ok, $attach_id, $m, $e) = cbia_generate_image_openai($desc0, 'intro', $title);
+			$desc0 = (string)($img_descs['featured']['desc'] ?? '');
+			if ($desc0 === '') $desc0 = (string)($pending[0]['desc'] ?? $title);
+			if ($desc0 === '') $desc0 = $title;
+
+			$prompt = cbia_build_image_prompt_for_post($post_id, 'featured', $desc0, 0);
+			$alt = cbia_sanitize_alt_from_desc($desc0);
+			if ($alt === '') $alt = cbia_sanitize_alt_from_desc($title);
+
+			list($ok, $attach_id, $m, $e) = cbia_generate_image_openai_with_prompt($prompt, 'intro', $title, $alt, 0);
 
 			if ($ok && $attach_id) {
 				set_post_thumbnail($post_id, (int)$attach_id);
-				cbia_log("Pendientes: destacada creada en post {$post_id} (attach_id={$attach_id})", 'INFO');
+				$img_descs['featured']['desc'] = $desc0;
+				$img_descs['featured']['section'] = 'intro';
+				$img_descs['featured']['attach_id'] = (int)$attach_id;
+				cbia_log(sprintf('Pendientes: destacada creada en post %d (attach_id=%d)', (int)$post_id, (int)$attach_id), 'INFO');
 				cbia_image_append_call($post_id, 'intro', $m, true, (int)$attach_id, '');
 			} else {
-				cbia_log("Pendientes: fallo destacada post {$post_id}: " . ($e ?: ''), 'ERROR');
+				cbia_log('Pendientes: fallo destacada post ' . (int)$post_id . ': ' . ($e ?: ''), 'ERROR');
 				cbia_image_append_call($post_id, 'intro', $m, false, 0, (string)($e ?: ''));
 			}
 		}
-
-		// Función interna para reemplazar un token pendiente concreto
-		$replace_pending = function(&$html, $pending_token, $replacement) {
-			$token = (string)$pending_token;
-			$pattern = '/<span[^>]*class=("|\')cbia-img-pendiente\1[^>]*>\s*' . preg_quote($token, '/') . '\s*<\/span>/iu';
-			$count = 0;
-			$new = preg_replace($pattern, (string)$replacement, (string)$html, 1, $count);
-			if ($count > 0 && $new !== null) {
-				$html = $new;
-			}
-		};
 
 		foreach ($pending as $pk => $pm) {
 			if ($filled >= $max_images) break;
 
 			$desc = (string)$pm['desc'];
-			$current_pos = strpos($html, $pm['full']);
-			$section = ($current_pos !== false) ? cbia_detect_marker_section($html, (int)$current_pos, false) : 'body';
+			$short_desc = cbia_sanitize_image_short_desc($desc);
+			if ($short_desc === '') {
+				$short_desc = $title;
+				cbia_log('Pendientes: SHORT_DESC vacio, usando titulo', 'INFO');
+			}
 
-			list($ok, $attach_id, $m, $e) = cbia_generate_image_openai($desc, $section, $title);
+			$idx = function_exists('cbia_find_internal_index_by_desc')
+				? cbia_find_internal_index_by_desc((array)($img_descs['internal'] ?? array()), $short_desc)
+				: 0;
+
+			$section = 'body';
+			if ($idx > 0 && !empty($img_descs['internal'][$idx - 1]['section'])) {
+				$section = (string)$img_descs['internal'][$idx - 1]['section'];
+			} else {
+				$current_pos = strpos($html, $pm['full']);
+				$section = ($current_pos !== false) ? cbia_detect_marker_section($html, (int)$current_pos, false) : 'body';
+			}
+
+			$prompt = cbia_build_image_prompt_for_post($post_id, 'internal', $short_desc, $idx ?: ($pk + 1));
+			$alt = cbia_sanitize_alt_from_desc($short_desc);
+			if ($alt === '') $alt = cbia_sanitize_alt_from_desc($title);
+
+			$use_idx = $idx ?: ($pk + 1);
+			list($ok, $attach_id, $m, $e) = cbia_generate_image_openai_with_prompt($prompt, $section, $title, $alt, $use_idx);
 			if ($ok && $attach_id) {
 				// Registrar usage de imagen en costes
 				if (function_exists('cbia_costes_record_usage')) {
@@ -80,10 +103,22 @@ if (!function_exists('cbia_fill_pending_images_for_post')) {
 				}
 
 				$url = wp_get_attachment_url((int)$attach_id);
-				$alt = cbia_build_img_alt($title, $section, $desc);
-				$img_tag = cbia_build_content_img_tag($url, $alt, $section);
-				$replace_pending($html, $pm['full'], $img_tag);
+				$img_tag = cbia_build_content_img_tag_with_meta($url, $alt, $section, (int)$attach_id, $use_idx);
+				cbia_replace_pending_marker($html, $pm['full'], $img_tag);
 				$filled++;
+
+				// actualiza descs
+				if ($idx > 0 && isset($img_descs['internal'][$idx - 1])) {
+					$img_descs['internal'][$idx - 1]['desc'] = $short_desc;
+					$img_descs['internal'][$idx - 1]['section'] = (string)$section;
+					$img_descs['internal'][$idx - 1]['attach_id'] = (int)$attach_id;
+				} else {
+					$img_descs['internal'][] = array(
+						'desc' => $short_desc,
+						'section' => (string)$section,
+						'attach_id' => (int)$attach_id,
+					);
+				}
 
 				// marca en lista
 				foreach ($list as &$it) {
@@ -97,7 +132,7 @@ if (!function_exists('cbia_fill_pending_images_for_post')) {
 				}
 				unset($it);
 
-				cbia_log("Pendientes: imagen insertada post {$post_id} attach_id={$attach_id}", 'INFO');
+				cbia_log(sprintf('Pendientes: imagen insertada post %d attach_id=%d', (int)$post_id, (int)$attach_id), 'INFO');
 				cbia_image_append_call($post_id, $section, $m, true, (int)$attach_id, '');
 			} else {
 				// Registrar usage de imagen en costes (error)
@@ -123,14 +158,14 @@ if (!function_exists('cbia_fill_pending_images_for_post')) {
 				}
 				unset($it);
 
-				cbia_log("Pendientes: fallo generando imagen post {$post_id}: " . ($e ?: ''), 'ERROR');
+				cbia_log('Pendientes: fallo generando imagen post ' . (int)$post_id . ': ' . ($e ?: ''), 'ERROR');
 				cbia_image_append_call($post_id, $section, $m, false, 0, (string)($e ?: ''));
 			}
 		}
 
 		if ($filled > 0) {
 			// Limpieza de artefactos antes de guardar
-			cbia_cleanup_post_html($html);
+			$html = cbia_cleanup_post_html($html);
 			wp_update_post(['ID' => $post_id, 'post_content' => $html]);
 		}
 
@@ -138,8 +173,9 @@ if (!function_exists('cbia_fill_pending_images_for_post')) {
 		$left_count = count($left);
 		update_post_meta($post_id, '_cbia_pending_images', (string)$left_count);
 		update_post_meta($post_id, '_cbia_pending_images_list', wp_json_encode($list));
+		cbia_set_post_image_descs($post_id, $img_descs);
 
-		cbia_log("Pendientes: post {$post_id} rellenadas={$filled} restantes={$left_count}", 'INFO');
+		cbia_log(sprintf('Pendientes: post %d rellenadas=%d restantes=%d', (int)$post_id, (int)$filled, (int)$left_count), 'INFO');
 
 		return $filled;
 	}
@@ -150,33 +186,23 @@ if (!function_exists('cbia_run_fill_pending_images')) {
 		cbia_try_unlimited_runtime();
 		$limit_posts = max(1, (int)$limit_posts);
 
-		cbia_log("Rellenar pendientes: buscando posts (limit={$limit_posts})", 'INFO');
+		cbia_log(sprintf('Rellenar pendientes: buscando posts (limit=%d)', (int)$limit_posts), 'INFO');
 
 		$q = new WP_Query([
 			'post_type'      => 'post',
 			'posts_per_page' => $limit_posts,
 			'post_status'    => ['publish','future','draft','pending','private'],
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query'     => [
-				[
-					'key'     => '_cbia_created',
-					'value'   => '1',
-					'compare' => '=',
-				],
-				[
-					'key'     => '_cbia_pending_images',
-					'value'   => 0,
-					'compare' => '>',
-					'type'    => 'NUMERIC',
-				],
-			],
+			'meta_key'       => '_cbia_pending_images',
+			'meta_value'     => 0,
+			'meta_compare'   => '>',
+			'meta_type'      => 'NUMERIC',
 			'orderby' => 'date',
 			'order'   => 'DESC',
 			'fields'  => 'ids',
 		]);
 
 		if (empty($q->posts)) {
-			cbia_log("Rellenar pendientes: no hay posts con pendientes.", 'INFO');
+			cbia_log('Rellenar pendientes: no hay posts con pendientes.', 'INFO');
 			return 0;
 		}
 
@@ -184,13 +210,16 @@ if (!function_exists('cbia_run_fill_pending_images')) {
 		foreach ($q->posts as $pid) {
 			if (cbia_is_stop_requested()) break;
 			$pend = (int)get_post_meta((int)$pid, '_cbia_pending_images', true);
-			cbia_log("Rellenar pendientes: post {$pid} pendientes={$pend}", 'INFO');
+			$created = (string)get_post_meta((int)$pid, '_cbia_created', true) === '1';
+			if (!$created) continue;
+			cbia_log(sprintf('Rellenar pendientes: post %d pendientes=%d', (int)$pid, (int)$pend), 'INFO');
 			$total_filled += (int)cbia_fill_pending_images_for_post((int)$pid, 4);
 		}
 
 		wp_reset_postdata();
-		cbia_log("Rellenar pendientes: finalizado total_rellenadas={$total_filled}", 'INFO');
+		cbia_log(sprintf('Rellenar pendientes: finalizado total_rellenadas=%d', (int)$total_filled), 'INFO');
 
 		return $total_filled;
 	}
 }
+

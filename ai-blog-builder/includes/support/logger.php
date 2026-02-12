@@ -16,7 +16,7 @@ if (!class_exists('CBIA_Logger')) {
                 cbia_log((string)$msg, $level);
                 return;
             }
-            // error_log eliminado en FREE (evitar warnings en revisión).
+            // Sin fallback a error_log para evitar advertencias de seguridad.
         }
 
         public function info($msg) { $this->write('INFO', $msg); }
@@ -24,3 +24,4 @@ if (!class_exists('CBIA_Logger')) {
         public function error($msg) { $this->write('ERROR', $msg); }
     }
 }
+

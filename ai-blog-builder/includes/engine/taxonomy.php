@@ -36,7 +36,7 @@ if (!function_exists('cbia_ensure_category_exists')) {
 
 		$created = wp_insert_term(mb_substr($cat_name, 0, 180), 'category', ['slug' => $slug]);
 		if (is_wp_error($created)) {
-			cbia_log("Error creando categoría '{$cat_name}': " . $created->get_error_message(), 'ERROR');
+			cbia_log("Error creando categorÃ­a '{$cat_name}': " . $created->get_error_message(), 'ERROR');
 			return 0;
 		}
 		return (int)$created['term_id'];
@@ -84,7 +84,7 @@ if (!function_exists('cbia_get_allowed_tags_list')) {
 		$tags_string = (string)($s['default_tags'] ?? '');
 		$arr = array_filter(array_map('trim', explode(',', $tags_string)));
 		$arr = array_values(array_unique($arr));
-		return array_slice($arr, 0, 50); // lista permitida (luego asignamos máx 7)
+		return array_slice($arr, 0, 50); // lista permitida (luego asignamos mÃ¡x 7)
 	}
 }
 
@@ -106,7 +106,7 @@ if (!function_exists('cbia_pick_tags_from_content_allowed')) {
 			if (count($matched) >= $max) break;
 		}
 
-		// fallback si no matchea: primeras (pero máximo 7)
+		// fallback si no matchea: primeras (pero mÃ¡ximo 7)
 		if (empty($matched)) {
 			$matched = array_slice($allowed, 0, $max);
 		}
@@ -114,3 +114,5 @@ if (!function_exists('cbia_pick_tags_from_content_allowed')) {
 		return array_slice(array_values(array_unique($matched)), 0, $max);
 	}
 }
+
+

@@ -27,3 +27,4 @@ delete_option('cbia_yoast_log');
 
 // Settings in new structure (if any)
 delete_option('cbia_costes_log_counter');
+

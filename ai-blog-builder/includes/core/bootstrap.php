@@ -1,6 +1,6 @@
 <?php
 /**
- * Bootstrap for the FREE 1.0.0 structure.
+ * Bootstrap for the 3.0 structure.
  */
 
 if (!defined('ABSPATH')) exit;
@@ -16,6 +16,7 @@ $cbia_new_files = array(
     CBIA_INCLUDES_DIR . 'admin/config-admin.php',
     CBIA_INCLUDES_DIR . 'admin/blog-admin.php',
     CBIA_INCLUDES_DIR . 'services/blog-service.php',
+    CBIA_INCLUDES_DIR . 'services/article-preview-service.php',
     CBIA_INCLUDES_DIR . 'services/engine-service.php',
     CBIA_INCLUDES_DIR . 'services/settings-service.php',
     CBIA_INCLUDES_DIR . 'services/log-service.php',
@@ -29,11 +30,8 @@ $cbia_new_files = array(
     CBIA_INCLUDES_DIR . 'support/config-catalog.php',
     CBIA_INCLUDES_DIR . 'engine/engine.php',
     CBIA_INCLUDES_DIR . 'engine/blog.php',
-    CBIA_INCLUDES_DIR . 'integrations/yoast.php',
-    // Yoast legacy helpers (hook post-created for semÃ¡foro/metas)
-    CBIA_INCLUDES_DIR . 'integrations/yoast-legacy.php',
+    CBIA_INCLUDES_DIR . 'integrations/providers.php',
     CBIA_INCLUDES_DIR . 'integrations/openai.php',
-    CBIA_INCLUDES_DIR . 'jobs/scheduler.php',
 );
 
 foreach ($cbia_new_files as $cbia_file) {
@@ -41,3 +39,4 @@ foreach ($cbia_new_files as $cbia_file) {
         require_once $cbia_file;
     }
 }
+

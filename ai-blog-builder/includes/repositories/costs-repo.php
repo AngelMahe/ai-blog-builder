@@ -22,3 +22,4 @@ if (!class_exists('CBIA_Costs_Repo')) {
         }
     }
 }
+
