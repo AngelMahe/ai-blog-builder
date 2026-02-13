@@ -29,6 +29,12 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 }
                 return new WP_Error('missing_title', 'Debes indicar un titulo para previsualizar.');
             }
+            if (function_exists('cbia_post_exists_by_title') && cbia_post_exists_by_title($title)) {
+                if (function_exists('cbia_log')) {
+                    cbia_log("[PREVIEW] Titulo duplicado detectado: '{$title}'.", 'WARN');
+                }
+                return new WP_Error('duplicate_title', "El post '{$title}' ya existe. Cambia el titulo antes de generar preview.");
+            }
             if (function_exists('cbia_log')) {
                 cbia_log("[PREVIEW] Generando preview para '{$title}'.", 'INFO');
             }

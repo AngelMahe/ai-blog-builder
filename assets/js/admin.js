@@ -127,20 +127,7 @@
 
         // CAMBIO: Google Imagen (Vertex AI) extra fields
         function updateGoogleImageExtras() {
-            var imageProvider = getProvider('image');
-            document.querySelectorAll('.abb-google-imagen-fields[data-scope="image"]').forEach(function (el) {
-                el.style.display = (imageProvider === 'google') ? '' : 'none';
-            });
-            if (imageProvider !== 'google') return;
-            var modelSelect = document.querySelector('.abb-provider-model[data-scope="image"][data-provider="google"] select');
-            var model = modelSelect ? modelSelect.value : '';
-            var isImagen = model === 'imagen-2';
-            document.querySelectorAll('.abb-google-imagen-note-imagen').forEach(function (el) {
-                el.style.display = isImagen ? '' : 'none';
-            });
-            document.querySelectorAll('.abb-google-imagen-note-gemini').forEach(function (el) {
-                el.style.display = isImagen ? 'none' : '';
-            });
+            return;
         }
 
         function updateScope(scope) {

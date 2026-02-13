@@ -38,10 +38,6 @@ if (!isset($s['image_provider'])) $s['image_provider'] = 'openai';
 if (!isset($s['text_model'])) $s['text_model'] = '';
 if (!isset($s['google_api_key'])) $s['google_api_key'] = '';
 if (!isset($s['deepseek_api_key'])) $s['deepseek_api_key'] = '';
-// CAMBIO: Google Imagen (Vertex AI) defaults
-if (!isset($s['google_project_id'])) $s['google_project_id'] = '';
-if (!isset($s['google_location'])) $s['google_location'] = '';
-if (!isset($s['google_service_account_json'])) $s['google_service_account_json'] = '';
 if (!isset($s['content_images_banner_enabled'])) $s['content_images_banner_enabled'] = 0;
 if (!isset($s['openai_consent'])) $s['openai_consent'] = 1;
 // Normal: sin imágenes internas.
@@ -181,7 +177,7 @@ foreach ($providers_list as $pkey => $pdef) {
     echo '<select name="text_model[' . esc_attr($pkey) . ']" class="abb-select">';
     foreach ($text_list as $mdl) {
         $label = $mdl;
-        if ($pkey === 'google' && $mdl === 'gemini-1.5-flash-latest') $label .= ' (Recomendado)';
+        if ($pkey === 'google' && $mdl === 'gemini-2.5-flash') $label .= ' (Recomendado)';
         if ($pkey === 'openai' && $mdl === $recommended) $label .= ' (RECOMENDADO)';
         echo '<option value="' . esc_attr($mdl) . '" ' . selected($saved, $mdl, false) . '>' . esc_html($label) . '</option>';
     }
@@ -204,7 +200,7 @@ foreach ($providers_list as $pkey => $pdef) {
     } else {
         foreach ($img_list as $mdl) {
             $label = $mdl;
-            if ($mdl === 'gemini-3-pro-image-preview') $label = 'Nano Banana Pro (gemini-3-pro-image-preview)';
+            if ($mdl === 'imagen-3.0-generate-002') $label .= ' (Recomendado)';
             echo '<option value="' . esc_attr($mdl) . '" ' . selected($saved_img, $mdl, false) . '>' . esc_html($label) . '</option>';
         }
     }
@@ -255,18 +251,6 @@ foreach ($providers_list as $pkey => $pdef) {
     echo '</div>';
 }
 echo '</div>'; // api row imagen
-
-// CAMBIO: Google Imagen (Vertex AI) extra fields
-echo '<div class="abb-google-imagen-fields" data-scope="image" data-provider="google" style="display:none;">';
-echo '<label style="display:block;margin-top:10px;">Google Imagen (Vertex AI)</label>';
-echo '<div class="abb-api-input" style="margin-bottom:8px;">';
-echo '<input class="abb-input" type="text" name="google_project_id" placeholder="Project ID" value="' . esc_attr((string)($s['google_project_id'] ?? '')) . '" />';
-echo '<input class="abb-input" type="text" name="google_location" placeholder="Location (ej: us-central1)" value="' . esc_attr((string)($s['google_location'] ?? '')) . '" />';
-echo '</div>';
-echo '<textarea class="abb-input abb-textarea" name="google_service_account_json" rows="6" placeholder="Service Account JSON">' . esc_textarea((string)($s['google_service_account_json'] ?? '')) . '</textarea>';
-echo '<p class="description abb-google-imagen-note-imagen">Requerido SOLO si el modelo de imagen es <strong>Imagen 2</strong>. Usa Project ID, Location y Service Account JSON.</p>';
-echo '<p class="description abb-google-imagen-note-gemini" style="display:none;">Para <strong>Gemini 3 Pro Image Preview</strong> solo necesitas la API key de Google.</p>';
-echo '</div>';
 
 echo '<p class="description" style="margin-top:8px;">Puedes usar proveedores distintos para texto e imagen.</p>';
 

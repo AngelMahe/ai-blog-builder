@@ -222,28 +222,6 @@ if (!function_exists('cbia_get_provider_api_key')) {
     }
 }
 
-// CAMBIO: helpers para Google Imagen (Vertex AI)
-if (!function_exists('cbia_get_google_project_id')) {
-    function cbia_get_google_project_id(): string {
-        $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : [];
-        return (string)($settings['google_project_id'] ?? '');
-    }
-}
-
-if (!function_exists('cbia_get_google_location')) {
-    function cbia_get_google_location(): string {
-        $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : [];
-        return (string)($settings['google_location'] ?? '');
-    }
-}
-
-if (!function_exists('cbia_get_google_service_account_json')) {
-    function cbia_get_google_service_account_json(): string {
-        $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : [];
-        return (string)($settings['google_service_account_json'] ?? '');
-    }
-}
-
 if (!function_exists('cbia_get_text_provider')) {
     function cbia_get_text_provider(): string {
         $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : [];
@@ -258,6 +236,9 @@ if (!function_exists('cbia_get_text_provider')) {
 
 if (!function_exists('cbia_get_image_provider')) {
     function cbia_get_image_provider(): string {
+        if (!empty($GLOBALS['cbia_force_image_provider'])) {
+            return sanitize_key((string)$GLOBALS['cbia_force_image_provider']);
+        }
         $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : [];
         $p = sanitize_key((string)($settings['image_provider'] ?? ''));
         return $p !== '' ? $p : 'openai';
@@ -301,8 +282,9 @@ if (!function_exists('cbia_get_image_model_for_provider')) {
             if ($m !== '') return $m;
         }
 
-        // Fallback legacy: image_model global
-        if (!empty($settings['image_model']) && $provider === 'openai') {
+        // Fallback legacy: image_model global SOLO cuando el proveedor activo de imagen es OpenAI.
+        $active_image_provider = sanitize_key((string)($settings['image_provider'] ?? ''));
+        if (!empty($settings['image_model']) && $provider === 'openai' && ($active_image_provider === '' || $active_image_provider === 'openai')) {
             return (string)$settings['image_model'];
         }
 

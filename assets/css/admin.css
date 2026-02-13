@@ -373,15 +373,6 @@
     width: 360px;
     max-width: 100%;
 }
-.abb-google-imagen-fields {
-    margin-top: 10px;
-}
-.abb-google-imagen-fields .abb-textarea {
-    width: 100%;
-    max-width: 720px;
-    min-height: 120px;
-}
-
 .abb-consent {
     display: block;
     margin-top: 8px;

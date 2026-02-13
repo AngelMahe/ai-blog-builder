@@ -83,16 +83,6 @@ if (!function_exists('cbia_config_handle_post')) {
 			sanitize_text_field((string)($settings['deepseek_api_key'] ?? ''))
 		);
 		$openai_consent = 1;
-		// CAMBIO: Google Imagen (Vertex AI) settings
-		$google_project_id = isset($_POST['google_project_id'])
-			? sanitize_text_field(wp_unslash($_POST['google_project_id']))
-			: (string)($settings['google_project_id'] ?? '');
-		$google_location = isset($_POST['google_location'])
-			? sanitize_text_field(wp_unslash($_POST['google_location']))
-			: (string)($settings['google_location'] ?? '');
-		$google_service_account_json = isset($_POST['google_service_account_json'])
-			? sanitize_textarea_field(wp_unslash($_POST['google_service_account_json']))
-			: (string)($settings['google_service_account_json'] ?? '');
 
 		// CAMBIO: proveedores de texto e imagen
 		$text_provider = isset($_POST['text_provider']) ? sanitize_key((string) wp_unslash($_POST['text_provider'])) : (string)($settings['text_provider'] ?? '');
@@ -300,10 +290,6 @@ if (!function_exists('cbia_config_handle_post')) {
 			'google_api_key'         => $google_api_key,
 			'deepseek_api_key'       => $deepseek_api_key,
 			'openai_consent'         => $openai_consent,
-			// CAMBIO: Google Imagen (Vertex AI)
-			'google_project_id'      => $google_project_id,
-			'google_location'        => $google_location,
-			'google_service_account_json' => $google_service_account_json,
 			// CAMBIO: provider/model texto e imagen
 			'text_provider'          => $text_provider,
 			'text_model'             => $text_model,
@@ -346,15 +332,8 @@ if (!function_exists('cbia_config_handle_post')) {
 				$warnings[] = sprintf('Falta la API key de %s para generar texto. Añádela para poder usar ese proveedor.', ucfirst($text_provider));
 		}
 		if ($image_provider === 'google') {
-			// CAMBIO: Google Imagen vs Gemini Image Preview
-			if ($image_model === 'imagen-2') {
-				if ($google_project_id === '' || $google_location === '' || trim($google_service_account_json) === '') {
-					$warnings[] = 'Faltan datos de Google Vertex AI para usar Imagen 2 (Project ID, Location y Service Account JSON). Añádelos para generar imágenes con Imagen.';
-				}
-			} else {
-				if (empty($google_api_key)) {
-					$warnings[] = 'Falta la API key de Google para generar imágenes con Gemini. Añádela para poder usar ese modelo.';
-				}
+			if (empty($google_api_key)) {
+				$warnings[] = 'Falta la API key de Google para generar imágenes con Imagen. Añádela para poder usar ese modelo.';
 			}
 		} else {
 			if (empty($key_map[$image_provider] ?? '')) {

@@ -21,85 +21,11 @@ if (!function_exists('cbia_get_current_provider_key')) {
 	}
 }
 
-// CAMBIO: helpers Google Imagen/Gemini
-if (!function_exists('cbia_base64url_encode')) {
-	function cbia_base64url_encode(string $data): string {
-		return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
-	}
-}
-
-if (!function_exists('cbia_google_get_service_account_token')) {
-	/**
-	 * Obtiene access_token a partir de Service Account JSON (JWT OAuth).
-	 * Retorna [token, err]
-	 */
-	function cbia_google_get_service_account_token(string $service_json): array {
-		$service_json = trim($service_json);
-		if ($service_json === '') return ['', 'Service Account JSON vacio'];
-
-		$info = json_decode($service_json, true);
-		if (!is_array($info)) return ['', 'Service Account JSON invalido'];
-
-		$client_email = (string)($info['client_email'] ?? '');
-		$private_key  = (string)($info['private_key'] ?? '');
-		$token_uri    = (string)($info['token_uri'] ?? 'https://oauth2.googleapis.com/token');
-		if ($client_email === '' || $private_key === '') {
-			return ['', 'Service Account JSON incompleto'];
-		}
-
-		$cache_key = 'cbia_google_sa_token_' . md5($client_email);
-		$cached = get_transient($cache_key);
-		if (is_string($cached) && $cached !== '') {
-			return [$cached, ''];
-		}
-
-		$iat = time();
-		$exp = $iat + 3600;
-		$header = cbia_base64url_encode(wp_json_encode(['alg' => 'RS256', 'typ' => 'JWT']));
-		$claims = cbia_base64url_encode(wp_json_encode([
-			'iss' => $client_email,
-			'scope' => 'https://www.googleapis.com/auth/cloud-platform',
-			'aud' => $token_uri,
-			'iat' => $iat,
-			'exp' => $exp,
-		]));
-		$to_sign = $header . '.' . $claims;
-		$signature = '';
-		$ok = openssl_sign($to_sign, $signature, $private_key, 'sha256');
-		if (!$ok) {
-			return ['', 'No se pudo firmar JWT (Service Account)'];
-		}
-		$jwt = $to_sign . '.' . cbia_base64url_encode($signature);
-
-		$resp = wp_remote_post($token_uri, [
-			'headers' => ['Content-Type' => 'application/x-www-form-urlencoded'],
-			'body' => http_build_query([
-				'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-				'assertion' => $jwt,
-			]),
-			'timeout' => 30,
-		]);
-		if (is_wp_error($resp)) {
-			return ['', $resp->get_error_message()];
-		}
-		$code = (int) wp_remote_retrieve_response_code($resp);
-		$body = (string) wp_remote_retrieve_body($resp);
-		$data = json_decode($body, true);
-		if ($code < 200 || $code >= 300 || !is_array($data) || empty($data['access_token'])) {
-			$msg = is_array($data) && !empty($data['error_description']) ? (string)$data['error_description'] : 'Error token OAuth';
-			return ['', $msg . " (HTTP {$code})"];
-		}
-
-		$token = (string)$data['access_token'];
-		set_transient($cache_key, $token, 3300); // ~55 min
-		return [$token, ''];
-	}
-}
-
 if (!function_exists('cbia_google_imagen_model_id')) {
 	function cbia_google_imagen_model_id(string $model): string {
-		// CAMBIO: mapeo legacy "imagen-2" a modelo Vertex AI
-		if ($model === 'imagen-2') return 'imagegeneration@002';
+		// Mantener compatibilidad con alias legacy.
+		if ($model === 'imagen-2') return 'imagen-3.0-generate-002';
+		if ($model === 'imagen-3.0-generate-001') return 'imagen-3.0-generate-002';
 		return $model;
 	}
 }
@@ -212,26 +138,24 @@ if (!function_exists('cbia_google_generate_image_gemini')) {
 
 if (!function_exists('cbia_google_generate_image_imagen')) {
 	/**
-	 * Google Imagen (Vertex AI) con Service Account.
+	 * Google Imagen (Gemini API :predict con API key).
 	 * Retorna [ok, attach_id, model, err]
 	 */
 	function cbia_google_generate_image_imagen($prompt, $section, $title, $alt_text, $idx, $model) {
-		$project_id = function_exists('cbia_get_google_project_id') ? cbia_get_google_project_id() : '';
-		$location   = function_exists('cbia_get_google_location') ? cbia_get_google_location() : '';
-		$sa_json    = function_exists('cbia_get_google_service_account_json') ? cbia_get_google_service_account_json() : '';
-		if ($project_id === '' || $location === '' || trim($sa_json) === '') {
-			cbia_log(('Faltan datos de Google Vertex AI (Project ID/Location/Service Account JSON).'), 'ERROR');
-			return [false, 0, (string)$model, 'Faltan datos Vertex AI'];
+		$cfg = cbia_get_provider_config('google');
+		$api_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('google') : (string)($cfg['api_key'] ?? '');
+		if ($api_key === '') {
+			cbia_log(('Falta la API key de Google para generar imagenes (Imagen).'), 'ERROR');
+			return [false, 0, (string)$model, 'No hay API key (Google)'];
 		}
 
-		list($token, $tok_err) = cbia_google_get_service_account_token($sa_json);
-		if ($token === '') {
-			cbia_log(('Google Vertex AI token error: ') . $tok_err, 'ERROR');
-			return [false, 0, (string)$model, $tok_err];
-		}
+		$base_url = rtrim((string)($cfg['base_url'] ?? 'https://generativelanguage.googleapis.com'), '/');
+		$api_version = trim((string)($cfg['api_version'] ?? 'v1beta'), '/');
+		$imagen_model = cbia_google_imagen_model_id((string)$model);
+		$url = $base_url . '/' . $api_version . '/models/' . rawurlencode($imagen_model) . ':predict?key=' . rawurlencode($api_key);
 
-		$vertex_model = cbia_google_imagen_model_id((string)$model);
-		$url = 'https://' . $location . '-aiplatform.googleapis.com/v1/projects/' . rawurlencode($project_id) . '/locations/' . rawurlencode($location) . '/publishers/google/models/' . rawurlencode($vertex_model) . ':predict';
+		$size = cbia_image_size_for_section($section, $idx);
+		$aspect = cbia_google_image_aspect_ratio_from_size($size);
 
 		$payload = [
 			'instances' => [
@@ -239,13 +163,15 @@ if (!function_exists('cbia_google_generate_image_imagen')) {
 			],
 			'parameters' => [
 				'sampleCount' => 1,
+				'aspectRatio' => $aspect !== '' ? $aspect : '16:9',
+				'outputMimeType' => 'image/jpeg',
+				'safetySetting' => 'BLOCK_MEDIUM_AND_ABOVE',
 			],
 		];
 
 		$resp = wp_remote_post($url, [
 			'headers' => [
 				'Content-Type' => 'application/json',
-				'Authorization' => 'Bearer ' . $token,
 			],
 			'body' => wp_json_encode($payload),
 			'timeout' => 60,
@@ -269,6 +195,8 @@ if (!function_exists('cbia_google_generate_image_imagen')) {
 			$bytes = base64_decode((string)$data['predictions'][0]['bytesBase64Encoded']);
 		} elseif (!empty($data['predictions'][0]['image'])) {
 			$bytes = base64_decode((string)$data['predictions'][0]['image']);
+		} elseif (!empty($data['predictions'][0]['bytes_base64_encoded'])) {
+			$bytes = base64_decode((string)$data['predictions'][0]['bytes_base64_encoded']);
 		}
 
 		if ($bytes === '') {
@@ -293,13 +221,29 @@ if (!function_exists('cbia_google_generate_image_with_prompt')) {
 	 */
 	function cbia_google_generate_image_with_prompt($prompt, $section, $title, $alt_text = '', $idx = 0) {
 		$model = function_exists('cbia_get_image_model_for_provider')
-			? cbia_get_image_model_for_provider('google', function_exists('cbia_providers_get_recommended_image_model') ? cbia_providers_get_recommended_image_model('google') : 'imagen-2')
-			: 'imagen-2';
+			? cbia_get_image_model_for_provider('google', function_exists('cbia_providers_get_recommended_image_model') ? cbia_providers_get_recommended_image_model('google') : 'imagen-3.0-generate-002')
+			: 'imagen-3.0-generate-002';
+		$model = cbia_google_imagen_model_id((string)$model);
 
-		if ($model === 'imagen-2') {
-			return cbia_google_generate_image_imagen($prompt, $section, $title, $alt_text, $idx, $model);
+		// Fallback automático para cuota/disponibilidad.
+		$chain = array_values(array_unique(array_filter(array(
+			(string)$model,
+			'gemini-2.5-flash-image',
+		))));
+
+		$last_err = '';
+		foreach ($chain as $model_try) {
+			if (stripos((string)$model_try, 'imagen-') === 0) {
+				list($ok, $attach_id, $model_used, $err) = cbia_google_generate_image_imagen($prompt, $section, $title, $alt_text, $idx, $model_try);
+			} else {
+				list($ok, $attach_id, $model_used, $err) = cbia_google_generate_image_gemini($prompt, $section, $title, $alt_text, $idx, $model_try);
+			}
+			if ($ok) return [$ok, $attach_id, $model_used, $err];
+			$last_err = (string)$err;
+			cbia_log(sprintf("Google imagen fallback: fallo en modelo=%s, probando siguiente si existe.", (string)$model_try), 'WARN');
 		}
-		return cbia_google_generate_image_gemini($prompt, $section, $title, $alt_text, $idx, $model);
+
+		return [false, 0, '', $last_err !== '' ? $last_err : 'No se pudo generar imagen (Google)'];
 	}
 }
 
@@ -562,20 +506,12 @@ if (!function_exists('cbia_generate_image_openai')) {
 			cbia_try_unlimited_runtime();
 			// CAMBIO: proveedor de imagen segun settings
 			$img_provider = function_exists('cbia_get_image_provider') ? cbia_get_image_provider() : 'openai';
-			if ($img_provider === 'google') {
+			if ($img_provider === 'google' || $img_provider === 'gemini') {
 				return cbia_google_generate_image($desc, $section, $title, $idx);
 			}
 			if ($img_provider !== 'openai') {
 				cbia_log(sprintf(('Proveedor de imagen "%s" no soportado.'), (string)$img_provider), 'ERROR');
 				return [false, 0, '', 'Proveedor de imagen no soportado'];
-			}
-			// PRO: provider selector (fallback to OpenAI if different provider selected)
-			if (function_exists('cbia_providers_get_settings') && function_exists('cbia_providers_get_current_provider')) {
-				$provider_settings = cbia_providers_get_settings();
-				$current_provider = cbia_providers_get_current_provider($provider_settings);
-				if ($current_provider !== 'openai') {
-					cbia_log(sprintf(('Provider activo "%s" aun no soportado para imagenes. Usando OpenAI como fallback.'), (string)$current_provider), 'WARN');
-				}
 			}
 			// CAMBIO: key OpenAI desde settings por proveedor
 			$api_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('openai') : cbia_openai_api_key();
@@ -683,20 +619,12 @@ if (!function_exists('cbia_generate_image_openai_with_prompt')) {
 		cbia_try_unlimited_runtime();
 		// CAMBIO: proveedor de imagen segun settings
 		$img_provider = function_exists('cbia_get_image_provider') ? cbia_get_image_provider() : 'openai';
-		if ($img_provider === 'google') {
+		if ($img_provider === 'google' || $img_provider === 'gemini') {
 			return cbia_google_generate_image_with_prompt($prompt, $section, $title, $alt_text, $idx);
 		}
 		if ($img_provider !== 'openai') {
 			cbia_log(sprintf(('Proveedor de imagen "%s" no soportado.'), (string)$img_provider), 'ERROR');
 			return [false, 0, '', 'Proveedor de imagen no soportado'];
-		}
-		// PRO: provider selector (fallback to OpenAI if different provider selected)
-		if (function_exists('cbia_providers_get_settings') && function_exists('cbia_providers_get_current_provider')) {
-			$provider_settings = cbia_providers_get_settings();
-			$current_provider = cbia_providers_get_current_provider($provider_settings);
-			if ($current_provider !== 'openai') {
-				cbia_log(sprintf(('Provider activo "%s" aun no soportado para imagenes. Usando OpenAI como fallback.'), (string)$current_provider), 'WARN');
-			}
 		}
 		// CAMBIO: key OpenAI desde settings por proveedor
 		$api_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('openai') : cbia_openai_api_key();
@@ -826,8 +754,8 @@ if (!function_exists('cbia_google_generate_content_call')) {
 		}
 
 		$model = function_exists('cbia_get_text_model_for_provider')
-			? cbia_get_text_model_for_provider('google', 'gemini-1.5-flash-latest')
-			: cbia_get_provider_model('google', 'gemini-1.5-flash-latest');
+			? cbia_get_text_model_for_provider('google', 'gemini-2.5-flash')
+			: cbia_get_provider_model('google', 'gemini-2.5-flash');
 		$base_url = rtrim((string)($cfg['base_url'] ?? 'https://generativelanguage.googleapis.com'), '/');
 		$api_version = trim((string)($cfg['api_version'] ?? 'v1beta'), '/');
 

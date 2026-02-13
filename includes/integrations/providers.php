@@ -22,9 +22,9 @@ if (!function_exists('cbia_providers_defaults')) {
                 'google' => array(
                     'label' => 'Google (Gemini)',
                     'api_key' => '',
-                    'model' => 'gemini-1.5-flash-latest',
+                    'model' => 'gemini-2.5-flash',
                     // CAMBIO: modelo de imagen por proveedor (persistencia)
-                    'image_model' => 'imagen-2',
+                    'image_model' => 'imagen-3.0-generate-002',
                     'base_url' => 'https://generativelanguage.googleapis.com',
                     'api_version' => 'v1beta',
                 ),
@@ -282,11 +282,9 @@ if (!function_exists('cbia_providers_get_model_list')) {
         $lists = array(
             'openai' => array('gpt-4.1-nano', 'gpt-4.1-mini', 'gpt-4.1', 'gpt-5-nano', 'gpt-5-mini', 'gpt-5'),
             'google' => array(
-                'gemini-1.5-flash-latest',
-                'gemini-1.5-flash-8b',
-                'gemini-1.5-pro-latest',
-                'gemini-2.0-flash',
-                'gemini-2.0-flash-exp',
+                'gemini-2.5-flash',
+                'gemini-2.5-pro',
+                'gemini-2.5-flash-lite',
             ),
             'deepseek' => array('deepseek-chat', 'deepseek-coder'),
         );
@@ -303,16 +301,13 @@ if (!function_exists('cbia_providers_get_text_model_list')) {
 
 if (!function_exists('cbia_providers_get_image_model_list')) {
     /**
-     * Modelos de imagen por proveedor (para futura habilitacion).
-     * Fuente:
-     * - Gemini 2.5 Flash Image: gemini-2.5-flash-image
-     * - Gemini 3 Pro Image Preview: gemini-3-pro-image-preview
+     * Modelos de imagen por proveedor.
      */
     function cbia_providers_get_image_model_list(string $provider): array {
         $lists = array(
             // CAMBIO: modelos de imagen requeridos (manteniendo compatibilidad)
             'openai' => array('gpt-image-1-mini', 'gpt-image-1', 'gpt-image-1-large'),
-            'google' => array('imagen-2', 'gemini-3-pro-image-preview'),
+            'google' => array('imagen-3.0-generate-002', 'imagen-4.0-generate-001'),
             'deepseek' => array(),
         );
         return $lists[$provider] ?? array();
@@ -323,7 +318,7 @@ if (!function_exists('cbia_providers_get_image_model_list')) {
 if (!function_exists('cbia_providers_get_recommended_text_model')) {
     function cbia_providers_get_recommended_text_model(string $provider): string {
         $provider = sanitize_key($provider);
-        if ($provider === 'google') return 'gemini-1.5-flash-latest';
+        if ($provider === 'google') return 'gemini-2.5-flash';
         if ($provider === 'deepseek') return 'deepseek-chat';
         return function_exists('cbia_get_recommended_text_model') ? cbia_get_recommended_text_model() : 'gpt-4.1-mini';
     }
@@ -332,7 +327,7 @@ if (!function_exists('cbia_providers_get_recommended_text_model')) {
 if (!function_exists('cbia_providers_get_recommended_image_model')) {
     function cbia_providers_get_recommended_image_model(string $provider): string {
         $provider = sanitize_key($provider);
-        if ($provider === 'google') return 'imagen-2';
+        if ($provider === 'google') return 'imagen-3.0-generate-002';
         return 'gpt-image-1-mini';
     }
 }

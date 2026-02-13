@@ -2,7 +2,7 @@
 /**
  * Plugin Name: AI Blog Builder
  * Description: Version normal de AI Blog Builder.
- * Version: 1.1.0
+ * Version: 1.1.1
  *
  * Author: CBIA Studio
  * Requires at least: 6.9
@@ -13,7 +13,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-if (!defined('CBIA_VERSION')) define('CBIA_VERSION', '1.1.0');
+if (!defined('CBIA_VERSION')) define('CBIA_VERSION', '1.1.1');
 if (!defined('CBIA_PLUGIN_FILE')) define('CBIA_PLUGIN_FILE', __FILE__);
 if (!defined('CBIA_PLUGIN_DIR')) define('CBIA_PLUGIN_DIR', plugin_dir_path(__FILE__));
 if (!defined('CBIA_PLUGIN_URL')) define('CBIA_PLUGIN_URL', plugin_dir_url(__FILE__));
