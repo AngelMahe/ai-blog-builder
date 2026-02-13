@@ -1,41 +1,43 @@
-=== Creador Blog IA ===
+=== AI Blog Builder ===
 Contributors: webgoh
 Requires at least: 6.9
-Tested up to: 6.9.0
-Stable tag: 1.0.0
+Tested up to: 6.9
+Stable tag: 1.1.0
 Requires PHP: 8.2
+Network: true
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Genera entradas con IA (texto + 1 imagen destacada) con reanudacion por checkpoint y log en vivo.
+AI Blog Builder: generación de entradas con IA (texto + imagen destacada), con reanudación por checkpoint y flujo de preview.
 
 == Description ==
 
-Plugin FREE para crear posts con OpenAI sin bloquear la pantalla. Procesa por tandas, reanuda con checkpoint y deja un log claro de todo el proceso.
-Este plugin usa la API de OpenAI unicamente cuando el usuario lo activa desde el panel y con consentimiento explicito en Configuracion.
+Plugin para crear entradas con IA (texto + imagen destacada) sin bloquear la pantalla. Procesa con reanudación por checkpoint, asigna categorías/tags por reglas y mantiene un flujo de preview. No requiere otro plugin.
+This plugin uses the OpenAI API only when enabled by the user in the settings and with explicit consent.
 
-Caracteristicas clave:
-* Generacion de texto + 1 imagen destacada
-* Reanudacion con checkpoint (no bloquea el admin)
-* Log en vivo y STOP seguro
-* Uso con API Key del usuario
-* Publicacion inmediata
+Key features:
+* 1 featured image (sin imagenes en contenido)
+* [IMAGE: ...] markers inserted automatically if missing; extra markers are removed
+* Live log and safe STOP
+* Costs: quick estimate and REAL cost per call (optional fixed image price)
+* Quick environment/plugin diagnostics
+* Optional Yoast SEO support. The plugin does not require Yoast; if active, it syncs meta and hooks.
 
 == Installation ==
-1. Sube la carpeta del plugin a `wp-content/plugins/`.
-2. Activa el plugin desde ?Plugins?.
-3. Ve a Ajustes ? Creador Blog IA, a?ade tu API Key y configura.
+1. Upload the plugin folder to `wp-content/plugins/`.
+2. Activate the plugin from “Plugins”.
+3. Go to Settings -> AI Blog Builder, add your API Key, and configure.
 
 == Frequently Asked Questions ==
 
-= ?Como funciona la reanudacion? =
-Usa un checkpoint que guarda cola, indice y totales. El boton ?Crear blogs (con reanudacion)? procesa 1 post por tanda y, si queda cola, reprograma la siguiente.
+= How does resume work? =
+It uses a checkpoint that stores queue, index, and totals. The “Create Blogs” button enqueues an event; each event processes N posts (default 1) and re-schedules if the queue remains.
 
-= ?Necesito Yoast o CRON? =
-No. El plugin funciona sin Yoast y sin CRON.
+= What happens if an image fails? =
+It is replaced by a hidden “pending” marker. You can click “Fill pending” or let CRON handle it.
 
-= ?Se puede usar sin API Key? =
-No. Necesitas una API Key de OpenAI y consentimiento explicito en Configuracion.
+= Why does the real cost not match? =
+Enable “fixed price per image”, adjust mini/full rates and, if needed, add the text/SEO call overhead and the real-cost multiplier.
 
-== Changelog ==
-* 1.0.0 - Primera version FREE estable.
+
+
